@@ -8,6 +8,7 @@ import 'widgets/sidebar.dart';
 import 'seiten/dashboard.dart';
 import 'seiten/kunden.dart';
 import 'seiten/mitarbeiter.dart';
+import 'seiten/einstellung.dart'; // 👈 NEU
 
 // Controller + Infrastruktur
 import 'controllers/anmeldung_controller.dart';
@@ -84,7 +85,7 @@ class _StartseiteState extends State<Startseite> {
       case 4:
         return const Center(child: Text("Statistik"));
       case 5:
-        return const Center(child: Text("Einstellungen"));
+        return const EinstellungSeite(); // 👈 NEU
       default:
         return const Center(child: Text("Unbekannt"));
     }

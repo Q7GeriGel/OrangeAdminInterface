@@ -17,6 +17,7 @@ class Sidebar extends StatelessWidget {
     (icon: Icons.badge,            label: 'Mitarbeiter'),
     (icon: Icons.calendar_today,   label: 'Terminübersicht'),
     (icon: Icons.bar_chart,        label: 'Statistik'),
+    (icon: Icons.settings,         label: 'Einstellungen'), // 👈 hinzugefügt
   ];
 
   @override
@@ -56,17 +57,6 @@ class Sidebar extends StatelessWidget {
                 const SizedBox(height: 10),
               ],
             ],
-          ),
-
-          // Einstellungen (immer letzter Index = 5)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 20.0),
-            child: _SidebarEintrag(
-              icon: Icons.settings,
-              label: 'Einstellungen',
-              ausgewaehlt: ausgewaehlterIndex == 5,
-              onTap: () => beimAuswaehlen(5),
-            ),
           ),
         ],
       ),
