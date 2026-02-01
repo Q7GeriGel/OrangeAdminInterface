@@ -90,7 +90,7 @@ class _KundeDialogState extends State<KundeDialog> {
             ]),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: friseur.isEmpty ? null : friseur,
+              initialValue: friseur.isEmpty ? null : friseur,
               items: widget.friseure
                   .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                   .toList(),

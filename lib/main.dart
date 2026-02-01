@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// Sidebar
-import 'widgets/sidebar.dart';
-
 // Seiten
-import 'seiten/dashboard.dart';
-import 'seiten/kunden.dart';
-import 'seiten/mitarbeiter.dart';
-import 'seiten/einstellung.dart'; // 👈 NEU
+import 'seiten/auth_gate.dart';
 
 // Controller + Infrastruktur
 import 'controllers/anmeldung_controller.dart';
@@ -28,66 +22,34 @@ class FriseurOrangeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Terminquelle quelle = MockTerminquelle();
-    final dienst = TerminplanService(quelle: quelle);
+
+    
+    final dienst = TerminplanService(
+      quelle: quelle,
+      minutenProSlot: 30,
+      startStunde: 8,
+      endStunde: 20,
+    );
 
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AnmeldungController()..lade()),
-        ChangeNotifierProvider(create: (_) => TerminplanController(dienst)),
+        ChangeNotifierProvider(
+          create: (_) => TerminplanController(dienst)..loadWeek(),
+        ),
         ChangeNotifierProvider(create: (_) => NotizenController()),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         title: 'Friseur Orange',
         debugShowCheckedModeBanner: false,
-        home: Startseite(),
+        theme: ThemeData(
+          useMaterial3: true,
+          colorSchemeSeed: Colors.deepOrange,
+        ),
+
+        
+        home: const AuthGate(),
       ),
     );
-  }
-}
-
-class Startseite extends StatefulWidget {
-  const Startseite({super.key});
-
-  @override
-  State<Startseite> createState() => _StartseiteState();
-}
-
-class _StartseiteState extends State<Startseite> {
-  int ausgewaehlterIndex = 0; // 0 = Dashboard
-  final String benutzername = "Eren"; // Fallback, falls noch kein gespeicherter Name
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
-        children: [
-          Sidebar(
-            ausgewaehlterIndex: ausgewaehlterIndex,
-            beimAuswaehlen: (index) => setState(() => ausgewaehlterIndex = index),
-          ),
-          Expanded(child: _seiteFuerIndex(ausgewaehlterIndex)),
-        ],
-      ),
-    );
-  }
-
-  /// Zentrale Stelle: welche Seite wird angezeigt?
-  Widget _seiteFuerIndex(int index) {
-    switch (index) {
-      case 0:
-        return DashboardPage(benutzername: benutzername);
-      case 1:
-        return const KundenSeite();
-      case 2:
-        return MitarbeiterSeite(benutzernameFallback: benutzername);
-      case 3:
-        return const Center(child: Text("Terminübersicht"));
-      case 4:
-        return const Center(child: Text("Statistik"));
-      case 5:
-        return const EinstellungSeite(); // 👈 NEU
-      default:
-        return const Center(child: Text("Unbekannt"));
-    }
   }
 }
