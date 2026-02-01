@@ -36,9 +36,9 @@ class Sidebar extends StatelessWidget {
             height: 140,
             alignment: Alignment.center,
             child: Image.asset(
-              'assets/logo.png',
-              width: 110,
-              height: 110,
+              'assets/logo.jpg',
+              width: 120,
+              height: 120,
               fit: BoxFit.contain,
               errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),

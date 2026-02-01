@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/notizen_controller.dart';
 import '../controllers/terminplan_controller.dart';
 
-/// Notiz-Kachel (rechter großer Block mit Notizbuch)
+/// Notiz-Kachel (rechts großer Block)
 class BoxShared extends StatefulWidget {
   const BoxShared({super.key});
 
@@ -20,11 +21,14 @@ class _BoxSharedState extends State<BoxShared> {
     super.initState();
     _c = TextEditingController();
 
-    // Notiz nach dem ersten Frame laden (kein use_build_context_synchronously)
+    // Notiz nach erstem Frame laden
+    final terminplan = context.read<TerminplanController>();
     final notizen = context.read<NotizenController>();
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await notizen.lade(DateTime.now());
-      if (mounted) setState(() {}); // optional: Textfeld refreshen
+      final day = _asDate(terminplan.tag);
+      await notizen.lade(day);
+      if (mounted) setState(() {});
     });
   }
 
@@ -34,11 +38,40 @@ class _BoxSharedState extends State<BoxShared> {
     super.dispose();
   }
 
+  DateTime _asDate(Object? v) {
+    if (v is DateTime) return v;
+
+    if (v is String) {
+      // 1) ISO (yyyy-mm-dd...)
+      final iso = DateTime.tryParse(v);
+      if (iso != null) return iso;
+
+      // 2) dd.MM.yyyy
+      try {
+        return DateFormat('dd.MM.yyyy').parseStrict(v);
+      } catch (_) {}
+
+      // 3) dd.MM (dann aktuelles Jahr)
+      try {
+        final d = DateFormat('dd.MM').parseStrict(v);
+        final now = DateTime.now();
+        return DateTime(now.year, d.month, d.day);
+      } catch (_) {}
+    }
+
+    return DateTime.now();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final tag = context.watch<TerminplanController>().tag;
-    final txt = context.watch<NotizenController>().text;
-    if (_c.text != txt) _c.text = txt;
+    final terminplan = context.watch<TerminplanController>();
+    final notizen = context.watch<NotizenController>();
+
+    // tag kann String ODER DateTime sein -> wir machen DateTime draus
+    final day = _asDate(terminplan.tag);
+
+    // Text syncen
+    if (_c.text != notizen.text) _c.text = notizen.text;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -52,18 +85,15 @@ class _BoxSharedState extends State<BoxShared> {
                 children: [
                   const Text(
                     'Schreibe deine Gedanken nieder!!!',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                   const Spacer(),
                   FilledButton.icon(
                     onPressed: () async {
-                      // Alles VOR await capturen → kein BuildContext danach
-                      final notizen   = context.read<NotizenController>();
                       final messenger = ScaffoldMessenger.of(context);
-                      final tagLocal  = tag;
-                      final text      = _c.text.trim();
+                      final txt = _c.text.trim();
 
-                      await notizen.speichere(tagLocal, text);
+                      await context.read<NotizenController>().speichere(day, txt);
 
                       messenger.showSnackBar(
                         const SnackBar(content: Text('Notiz gespeichert')),
@@ -96,89 +126,124 @@ class _BoxSharedState extends State<BoxShared> {
 }
 
 // -------------------
-// Hilfen für andere Dashboard-Kacheln (Titel + Listeneinträge)
+// Dashboard: Einträge + Box
 // -------------------
 
 class DashboardEntry {
   final String text;
-  const DashboardEntry(this.text);
+  final Color? accent;
+  final VoidCallback? onTap;
+
+  const DashboardEntry(this.text, {this.accent, this.onTap});
 }
 
 class DashboardBox extends StatelessWidget {
   final String titel;
   final List<DashboardEntry> eintraege;
   final double maxHeight;
-  final IconData? icon; // <- NEU: optionales Icon
+  final IconData? icon;
 
   const DashboardBox({
     super.key,
     required this.titel,
     required this.eintraege,
     this.maxHeight = 220,
-    this.icon, // <- NEU
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 420,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Kopf (oranger Balken)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFCC5C4C),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(icon ?? Icons.info, color: Colors.white, size: 18), // <- nutzt icon
-                const SizedBox(width: 8),
-                Text(
-                  titel,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
+    const orange = Color(0xFFCC5C4C);
+    const blue = Color(0xFF335776);
 
-          // Inhalt (blauer Kasten mit Liste)
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFF335776),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.all(8),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight),
-              child: Scrollbar(
-                thumbVisibility: true,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: orange,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Icon(icon ?? Icons.info, color: Colors.white, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                titel,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // Body
+        Container(
+          decoration: BoxDecoration(
+            color: blue,
+            borderRadius: BorderRadius.circular(18),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: Scrollbar(
+              thumbVisibility: true,
+              thickness: 8,
+              radius: const Radius.circular(999),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 10),
                 child: ListView.separated(
                   itemCount: eintraege.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
-                  itemBuilder: (_, i) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    decoration: BoxDecoration(
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) {
+                    final e = eintraege[i];
+                    final accent = e.accent ?? orange;
+                    final clickable = e.onTap != null;
+
+                    return Material(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      eintraege[i].text,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: e.onTap,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  e.text,
+                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              if (clickable)
+                                const Icon(Icons.chevron_right, color: Colors.black54),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

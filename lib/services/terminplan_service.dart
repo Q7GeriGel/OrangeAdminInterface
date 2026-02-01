@@ -1,82 +1,82 @@
-import 'package:flutter/material.dart';
-import '../models/zeitfenster.dart';
+import '../models/termin.dart';
 import '../repositories/terminquelle.dart';
 
 class TerminplanService {
   final Terminquelle quelle;
-  final int minutenProSlot;
-  final int startStunde;
-  final int endStunde;
 
-  TerminplanService({
-    required this.quelle,
-    this.minutenProSlot = 30,
-    this.startStunde = 9,
-    this.endStunde = 18,
-  });
+  TerminplanService({required this.quelle});
 
-  /// --- Bestehend: freie Slots für EINEN Tag ---
-  Future<List<Zeitfenster>> freieSlots(DateTime tag) async {
-    final gebucht = await quelle.holeGebuchteStarts(tag);
-    final keys = gebucht.map((d) => d.millisecondsSinceEpoch).toSet();
+  Future<List<Termin>> ladeWoche(DateTime monday) => quelle.ladeWoche(monday);
 
-    final start = DateTime(tag.year, tag.month, tag.day, startStunde, 0);
-    final ende  = DateTime(tag.year, tag.month, tag.day, endStunde, 0);
+  Future<void> speichereWoche(DateTime monday, List<Termin> termine) =>
+      quelle.speichereWoche(monday, termine);
 
-    final out = <Zeitfenster>[];
-    var cur = start;
-    while (cur.isBefore(ende)) {
-      final next = cur.add(Duration(minutes: minutenProSlot));
-      if (!keys.contains(cur.millisecondsSinceEpoch)) {
-        out.add(Zeitfenster(cur, next));
-      }
-      cur = next;
-    }
-
-    final now = DateTime.now();
-    if (DateUtils.isSameDay(now, tag)) {
-      return out.where((z) => z.beginn.isAfter(now)).toList();
-    }
-    return out;
+  DateTime mondayOf(DateTime d) {
+    final dd = DateTime(d.year, d.month, d.day);
+    final diff = dd.weekday - DateTime.monday;
+    return dd.subtract(Duration(days: diff));
   }
 
-  // ===============================
-  //        NEU AB HIER
-  // ===============================
+  Future<Termin> createTerminAt(DateTime slotStart, {int minutes = 30}) async {
+    final monday = mondayOf(slotStart);
+    final list = await ladeWoche(monday);
 
-  /// Helper: Sonntag 00:00 der Woche von [d]
-  DateTime startVonWocheSonntag(DateTime d) {
-    final offset = d.weekday % 7; // So=0, Mo=1, ...
-    final so = DateTime(d.year, d.month, d.day).subtract(Duration(days: offset));
-    return DateTime(so.year, so.month, so.day);
+    final id = 'new_${DateTime.now().millisecondsSinceEpoch}';
+
+    final t = Termin(
+      id: id,
+      start: slotStart,
+      end: slotStart.add(Duration(minutes: minutes)),
+      kundeName: 'Neuer Kunde',
+      mitarbeiterName: 'Aylin',
+      status: Termin.statusOffen,
+      color: null,
+    );
+
+    list.add(t);
+    list.sort((a, b) => a.start.compareTo(b.start));
+    await speichereWoche(monday, list);
+
+    return t;
   }
 
-  /// Alle Slots (frei + belegt-agnostisch) eines Tages in Minutenrastern.
-  /// Nützlich fürs UI, wenn du alle Slots rendern willst.
-  List<Zeitfenster> alleSlotsEinesTages(DateTime tag) {
-    final start = DateTime(tag.year, tag.month, tag.day, startStunde, 0);
-    final ende  = DateTime(tag.year, tag.month, tag.day, endStunde, 0);
-
-    final out = <Zeitfenster>[];
-    var cur = start;
-    while (cur.isBefore(ende)) {
-      final next = cur.add(Duration(minutes: minutenProSlot));
-      out.add(Zeitfenster(cur, next));
-      cur = next;
-    }
-    return out;
+  Future<void> deleteTermin(String id, DateTime anyDate) async {
+    final monday = mondayOf(anyDate);
+    final list = await ladeWoche(monday);
+    list.removeWhere((t) => t.id == id);
+    await speichereWoche(monday, list);
   }
 
-  /// Freie Slots für die GANZE Woche (So–Sa). Key = Kalendertag 00:00.
-  /// Nutzt intern deine bestehende Tagesfunktion.
-  Future<Map<DateTime, List<Zeitfenster>>> freieSlotsWoche(DateTime sonntag) async {
-    final so = startVonWocheSonntag(sonntag);
-    final result = <DateTime, List<Zeitfenster>>{};
+  Future<void> moveTermin(String id, DateTime newStart, DateTime anyDate) async {
+    final monday = mondayOf(anyDate);
+    final list = await ladeWoche(monday);
+    final idx = list.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
 
-    for (int i = 0; i < 7; i++) {
-      final tag = DateTime(so.year, so.month, so.day).add(Duration(days: i));
-      result[tag] = await freieSlots(tag);
-    }
-    return result;
+    final old = list[idx];
+    final dur = old.end.difference(old.start);
+
+    list[idx] = old.copyWith(
+      start: newStart,
+      end: newStart.add(dur),
+    );
+
+    list.sort((a, b) => a.start.compareTo(b.start));
+    await speichereWoche(monday, list);
+  }
+
+  Future<void> updateDuration(String id, int minutes, DateTime anyDate) async {
+    final monday = mondayOf(anyDate);
+    final list = await ladeWoche(monday);
+    final idx = list.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+
+    final old = list[idx];
+    list[idx] = old.copyWith(
+      end: old.start.add(Duration(minutes: minutes)),
+    );
+
+    list.sort((a, b) => a.start.compareTo(b.start));
+    await speichereWoche(monday, list);
   }
 }

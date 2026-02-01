@@ -1,7 +1,6 @@
-import 'package:flutter/foundation.dart';
+import '../models/termin.dart';
 
-@immutable
 abstract class Terminquelle {
-  /// Gebuchte Startzeiten (z. B. 09:00, 09:30, …) für einen Tag
-  Future<List<DateTime>> holeGebuchteStarts(DateTime tag);
+  Future<List<Termin>> ladeWoche(DateTime monday);
+  Future<void> speichereWoche(DateTime monday, List<Termin> termine);
 }

@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 
 class Termin {
+  static const String statusOffen = 'Offen';
+  static const String statusBestaetigt = 'Bestätigt';
+  static const String statusAbgesagt = 'Abgesagt';
+
   final String id;
   final DateTime start;
   final DateTime end;
   final String kundeName;
   final String mitarbeiterName;
-  final String status; // 'Offen' | 'Bestätigt' | 'Abgesagt'
+
+  /// 'Offen' | 'Bestätigt' | 'Abgesagt'
+  final String status;
+
   final String? service;
   final double? price;
   final String? notes;

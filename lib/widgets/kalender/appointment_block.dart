@@ -21,7 +21,7 @@ class AppointmentBlock extends StatelessWidget {
       onDoubleTap: () => onDoubleTap(a),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: color.withAlpha(28), // ~11% ohne withOpacity
+          color: color.withAlpha(35),
           border: Border.all(color: color.withAlpha(220), width: 1),
           borderRadius: BorderRadius.circular(10),
         ),
@@ -31,10 +31,7 @@ class AppointmentBlock extends StatelessWidget {
             '${a.kundeName} — bei ${a.mitarbeiterName}$durText',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
           ),
         ),
       ),

@@ -1,209 +1,176 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
 import '../models/termin.dart';
-import '../models/zeitfenster.dart';
 import '../services/terminplan_service.dart';
+
+class FreiesZeitfenster {
+  final DateTime start;
+  final DateTime end;
+
+  FreiesZeitfenster(this.start, this.end);
+
+  String get beschriftung =>
+      '${DateFormat('HH:mm').format(start)} – ${DateFormat('HH:mm').format(end)}';
+}
 
 class TerminplanController extends ChangeNotifier {
   final TerminplanService service;
 
   TerminplanController(this.service) {
-    _currentWeekMonday = _startOfWeekMonday(DateTime.now());
-    _tag = DateTime.now();
+    goToday();
   }
 
-  // ============================
-  //   WOCHE (Mo–Sa)
-  // ============================
+  // Woche
+  DateTime currentWeekMonday = DateTime.now();
+  bool loading = false;
+  List<Termin> termine = [];
 
-  late DateTime _currentWeekMonday;
-  bool _loadingWeek = false;
-  List<Termin> _termine = [];
+  // Dashboard (heute)
+  bool lade = false;
+  List<FreiesZeitfenster> freie = [];
+  List<String> aenderungen = [];
 
-  DateTime get currentWeekMonday => _currentWeekMonday;
-  bool get loading => _loadingWeek;
-  List<Termin> get termine => List.unmodifiable(_termine);
+  /// ✅ Wichtig: DateTime (damit BoxShared/Notizen nicht mit String crasht)
+  DateTime tag = DateTime.now();
 
-  DateTime _startOfWeekMonday(DateTime d) {
-    final offset = d.weekday - 1; // Montag = 1 -> 0 Offset
-    final monday = DateTime(d.year, d.month, d.day).subtract(Duration(days: offset));
-    return DateTime(monday.year, monday.month, monday.day);
-  }
+  DateTime _mondayOf(DateTime d) => service.mondayOf(d);
 
-  /// Lädt Termine für eine Woche (Dummy oder später API)
-  Future<void> loadWeek([DateTime? monday, bool withDummy = true]) async {
-    _loadingWeek = true;
+  Future<void> ladeWoche(DateTime monday) async {
+    loading = true;
     notifyListeners();
 
-    if (monday != null) _currentWeekMonday = monday;
+    currentWeekMonday = _mondayOf(monday);
+    termine = await service.ladeWoche(currentWeekMonday);
 
-    // TODO: später echte Termine aus Repository laden
-    _termine = withDummy ? _demoAppointments(_currentWeekMonday) : [];
+    loading = false;
+    notifyListeners();
 
-    _loadingWeek = false;
+    await aktualisiere(DateTime.now());
+  }
+
+  void prevWeek() => ladeWoche(currentWeekMonday.subtract(const Duration(days: 7)));
+  void nextWeek() => ladeWoche(currentWeekMonday.add(const Duration(days: 7)));
+
+  void goToday() {
+    final now = DateTime.now();
+    ladeWoche(_mondayOf(now));
+  }
+
+  Future<void> aktualisiere(DateTime day) async {
+    lade = true;
+    notifyListeners();
+
+    final d0 = DateTime(day.year, day.month, day.day);
+    tag = d0;
+
+    final dayTermine = termine.where((t) {
+      final s = t.start;
+      return s.year == d0.year && s.month == d0.month && s.day == d0.day;
+    }).toList()
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    freie = _calcFreieZeitfenster(dayTermine, d0);
+
+    lade = false;
     notifyListeners();
   }
 
-  Future<void> prevWeek() =>
-      loadWeek(_currentWeekMonday.subtract(const Duration(days: 7)));
+  List<FreiesZeitfenster> _calcFreieZeitfenster(List<Termin> dayTermine, DateTime d0) {
+    const startHour = 8;
+    const endHour = 20;
+    const slotMinutes = 30;
 
-  Future<void> nextWeek() =>
-      loadWeek(_currentWeekMonday.add(const Duration(days: 7)));
-
-  Future<void> goToday() =>
-      loadWeek(_startOfWeekMonday(DateTime.now()));
-
-  // ============================
-  //   TAGESANSICHT / FREIE SLOTS
-  // ============================
-
-  late DateTime _tag;
-  bool _lade = false;
-  List<Zeitfenster> _freie = [];
-
-  DateTime get tag => _tag;
-  bool get lade => _lade;
-  List<Zeitfenster> get freie => List.unmodifiable(_freie);
-
-  /// Lädt freie Zeitfenster für den gewählten Tag
-  Future<void> aktualisiere([DateTime? neuerTag]) async {
-    if (neuerTag != null) {
-      _tag = DateTime(neuerTag.year, neuerTag.month, neuerTag.day);
+    bool overlaps(DateTime aStart, DateTime aEnd, DateTime bStart, DateTime bEnd) {
+      return aStart.isBefore(bEnd) && aEnd.isAfter(bStart);
     }
 
-    _lade = true;
-    notifyListeners();
+    final res = <FreiesZeitfenster>[];
+    DateTime slot = DateTime(d0.year, d0.month, d0.day, startHour, 0);
 
-    try {
-      _freie = await service.freieSlots(_tag);
-    } finally {
-      _lade = false;
-      notifyListeners();
+    while (slot.isBefore(DateTime(d0.year, d0.month, d0.day, endHour, 0))) {
+      final slotEnd = slot.add(const Duration(minutes: slotMinutes));
+      final busy = dayTermine.any((t) => overlaps(t.start, t.end, slot, slotEnd));
+      if (!busy) res.add(FreiesZeitfenster(slot, slotEnd));
+      slot = slotEnd;
     }
+    return res;
   }
 
-  // ============================
-  //   TERMIN-AKTIONEN
-  // ============================
+  List<Termin> kommendeHeute({int limit = 6}) {
+    final now = DateTime.now();
+    final d0 = DateTime(now.year, now.month, now.day);
+    final list = termine.where((t) {
+      final s = t.start;
+      final isToday = s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      return isToday && t.start.isAfter(now.subtract(const Duration(minutes: 1)));
+    }).toList()
+      ..sort((a, b) => a.start.compareTo(b.start));
+    return list.take(limit).toList();
+  }
 
-  void createTerminAt(
-    DateTime start, {
-    String kunde = 'Neuer Kunde',
-    String mitarbeiter = 'Aylin',
-    int dauerMin = 30,
-  }) {
-    final termin = Termin(
-      id: UniqueKey().toString(),
-      start: _roundTo30(start),
-      end: _roundTo30(start).add(Duration(minutes: dauerMin)),
-      kundeName: kunde,
-      mitarbeiterName: mitarbeiter,
-      status: 'Offen',
-      service: 'Haarschnitt',
-      // price entfernt aus UI; Feld bleibt im Model optional
-      color: Colors.teal,
-    );
-    _termine = [..._termine, termin];
+  void _log(String text) {
+    aenderungen.insert(0, text);
+    if (aenderungen.length > 12) aenderungen.removeLast();
     notifyListeners();
   }
 
-  void moveTermin(String id, DateTime newStart) {
-    final index = _termine.indexWhere((t) => t.id == id);
-    if (index < 0) return;
+  Future<void> createTerminAt(DateTime slotStart) async {
+    final t = await service.createTerminAt(slotStart);
+    _log('Neu: ${t.kundeName} • ${DateFormat('HH:mm').format(t.start)}');
+    await ladeWoche(currentWeekMonday);
+  }
 
-    final alt = _termine[index];
-    final rounded = _roundTo30(newStart);
-    final neu = alt.copyWith(
-      start: rounded,
-      end: rounded.add(alt.end.difference(alt.start)),
-    );
-    _termine = [..._termine]..[index] = neu;
+  Future<void> deleteTermin(String id) async {
+    if (termine.isEmpty) return;
+
+    final found = termine.where((x) => x.id == id).toList();
+    final anyDate = found.isNotEmpty ? found.first.start : DateTime.now();
+
+    await service.deleteTermin(id, anyDate);
+
+    if (found.isNotEmpty) {
+      _log('Gelöscht: ${found.first.kundeName}');
+    } else {
+      _log('Gelöscht: Termin');
+    }
+
+    await ladeWoche(currentWeekMonday);
+  }
+
+  Future<void> moveTermin(String id, DateTime newStart) async {
+    final idx = termine.indexWhere((x) => x.id == id);
+    if (idx == -1) return;
+
+    final t = termine[idx];
+    await service.moveTermin(id, newStart, t.start);
+    _log('Verschoben: ${t.kundeName} → ${DateFormat('HH:mm').format(newStart)}');
+    await ladeWoche(currentWeekMonday);
+  }
+
+  Future<void> updateDuration(String id, int minutes) async {
+    final idx = termine.indexWhere((x) => x.id == id);
+    if (idx == -1) return;
+
+    final t = termine[idx];
+    await service.updateDuration(id, minutes, t.start);
+    _log('Dauer: ${t.kundeName} → ${minutes}m');
+    await ladeWoche(currentWeekMonday);
+  }
+
+  Future<void> toggleStatus(String id) async {
+    final idx = termine.indexWhere((x) => x.id == id);
+    if (idx == -1) return;
+    final t = termine[idx];
+    _log('Status geändert: ${t.kundeName}');
     notifyListeners();
   }
 
-  /// Dauer in Minuten (nur 30 oder 60 werden unterstützt).
-  void updateDuration(String id, int minutes) {
-    if (minutes != 30 && minutes != 60) return;
-    final index = _termine.indexWhere((t) => t.id == id);
-    if (index < 0) return;
-
-    final alt = _termine[index];
-    final neu = alt.copyWith(
-      end: alt.start.add(Duration(minutes: minutes)),
-    );
-    _termine = [..._termine]..[index] = neu;
+  Future<void> cancelTermin(String id) async {
+    final idx = termine.indexWhere((x) => x.id == id);
+    if (idx == -1) return;
+    final t = termine[idx];
+    _log('Storniert: ${t.kundeName}');
     notifyListeners();
   }
-
-  void toggleStatus(String id) {
-    final index = _termine.indexWhere((t) => t.id == id);
-    if (index < 0) return;
-
-    final alt = _termine[index];
-    final nextStatus = alt.status == 'Offen' ? 'Bestätigt' : 'Offen';
-    _termine = [..._termine]..[index] = alt.copyWith(status: nextStatus);
-    notifyListeners();
-  }
-
-  void cancelTermin(String id) {
-    final index = _termine.indexWhere((t) => t.id == id);
-    if (index < 0) return;
-
-    final alt = _termine[index];
-    _termine = [..._termine]..[index] = alt.copyWith(status: 'Abgesagt');
-    notifyListeners();
-  }
-
-  void deleteTermin(String id) {
-    _termine = _termine.where((t) => t.id != id).toList(growable: false);
-    notifyListeners();
-  }
-
-  // 30-Minuten-Rundung (nach unten auf 00/30)
-  DateTime _roundTo30(DateTime dt) {
-    final mm = dt.minute;
-    final roundedMin = (mm < 30) ? 0 : 30;
-    return DateTime(dt.year, dt.month, dt.day, dt.hour, roundedMin);
-  }
-}
-
-// ============================
-//   DUMMY-DATEN (Demo)
-// ============================
-
-List<Termin> _demoAppointments(DateTime monday) {
-  DateTime d(int weekdayOffset, int h, [int m = 0]) =>
-      DateTime(monday.year, monday.month, monday.day + weekdayOffset, h, m);
-
-  return [
-    Termin(
-      id: 'a1',
-      start: d(0, 9),
-      end: d(0, 9, 30),
-      kundeName: 'F. Kaya',
-      mitarbeiterName: 'Aylin',
-      status: 'Bestätigt',
-      service: 'Herrenhaarschnitt',
-      color: Colors.teal,
-    ),
-    Termin(
-      id: 'a2',
-      start: d(1, 10, 30),
-      end: d(1, 11, 30), // 60 min
-      kundeName: 'R. Yılmaz',
-      mitarbeiterName: 'Kaan',
-      status: 'Offen',
-      service: 'Färben + Schnitt',
-      color: Colors.orange,
-    ),
-    Termin(
-      id: 'a3',
-      start: d(2, 8),
-      end: d(2, 8, 30),
-      kundeName: 'L. Demir',
-      mitarbeiterName: 'Aylin',
-      status: 'Bestätigt',
-      service: 'Barttrimmen',
-      color: Colors.blue,
-    ),
-  ];
 }

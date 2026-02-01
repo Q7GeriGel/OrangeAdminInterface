@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../models/termin.dart';
-import 'slot_cell.dart';
+import 'appointment_block.dart';
 
 class WeeklyGrid extends StatefulWidget {
   const WeeklyGrid({
@@ -10,7 +11,7 @@ class WeeklyGrid extends StatefulWidget {
     this.startHour = 8,
     this.endHour = 20, // exclusive
     this.slotMinutes = 30,
-    this.slotHeight = 44,
+    this.slotHeight = 40,
     this.timeGutterWidth = 72,
     this.dayColumnMinWidth = 190,
     this.headerHeight = 48,
@@ -21,8 +22,8 @@ class WeeklyGrid extends StatefulWidget {
   final DateTime monday;
   final List<Termin> appointments;
   final int startHour;
-  final int endHour; // exclusive
-  final int slotMinutes; // 30
+  final int endHour;
+  final int slotMinutes;
   final double slotHeight;
   final double timeGutterWidth;
   final double dayColumnMinWidth;
@@ -42,7 +43,6 @@ class _WeeklyGridState extends State<WeeklyGrid> {
     super.initState();
     _vertical = ScrollController();
 
-    // Beim Öffnen grob zur aktuellen Zeit scrollen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final now = DateTime.now();
       if (now.hour >= widget.startHour && now.hour < widget.endHour) {
@@ -50,7 +50,6 @@ class _WeeklyGridState extends State<WeeklyGrid> {
         final fromStart =
             (now.hour - widget.startHour) * slotsPerHour + (now.minute >= 30 ? 1 : 0);
         final px = fromStart * widget.slotHeight;
-
         if (_vertical.hasClients) {
           _vertical.jumpTo(px.clamp(0, _vertical.position.maxScrollExtent));
         }
@@ -70,18 +69,14 @@ class _WeeklyGridState extends State<WeeklyGrid> {
   @override
   Widget build(BuildContext context) {
     final days = _daysMoSa(widget.monday);
-    final slotsPerHour = 60 ~/ widget.slotMinutes;
-    final totalSlots = (widget.endHour - widget.startHour) * slotsPerHour;
+    final totalSlots = ((widget.endHour - widget.startHour) * 60) ~/ widget.slotMinutes;
+    final totalHeight = totalSlots * widget.slotHeight;
 
-    final gridLine = BorderSide(color: Colors.black.withAlpha(18), width: 1);
+    final borderSide = Divider.createBorderSide(context);
 
-    // Header: Tageslabels (Mo–Sa)
-    final header = Container(
+    // Header
+    final header = SizedBox(
       height: widget.headerHeight,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
-        border: Border(bottom: gridLine),
-      ),
       child: Row(
         children: [
           SizedBox(width: widget.timeGutterWidth),
@@ -91,20 +86,20 @@ class _WeeklyGridState extends State<WeeklyGrid> {
               child: Row(
                 children: days.map((d) {
                   final label =
-                      '${['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.weekday - 1]} '
-                      '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
+                      '${['Mo','Di','Mi','Do','Fr','Sa'][d.weekday - 1]} '
+                      '${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}';
                   return ConstrainedBox(
                     constraints: BoxConstraints(minWidth: widget.dayColumnMinWidth),
                     child: Container(
                       alignment: Alignment.center,
                       height: widget.headerHeight,
                       decoration: BoxDecoration(
-                        border: Border(right: gridLine),
+                        border: Border(
+                          bottom: borderSide,
+                          right: borderSide,
+                        ),
                       ),
-                      child: Text(
-                        label,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
+                      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   );
                 }).toList(),
@@ -115,80 +110,195 @@ class _WeeklyGridState extends State<WeeklyGrid> {
       ),
     );
 
-    // Grid: jede Row = eine Zeitreihe (Gutter + 6 Tag-Zellen)
-    final grid = Expanded(
-      child: Scrollbar(
+    // Body (vertikal scrollt alles gemeinsam)
+    final body = Expanded(
+      child: SingleChildScrollView(
         controller: _vertical,
-        thumbVisibility: true,
-        radius: const Radius.circular(999),
-        child: ListView.builder(
-          controller: _vertical,
-          itemCount: totalSlots,
-          itemBuilder: (ctx, slotIndex) {
-            final hour = widget.startHour + (slotIndex ~/ slotsPerHour);
-            final minute = (slotIndex % slotsPerHour) * widget.slotMinutes;
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Zeit-Gutter
+            SizedBox(
+              width: widget.timeGutterWidth,
+              height: totalHeight,
+              child: Column(
+                children: List.generate(totalSlots, (i) {
+                  final minutesFromStart = i * widget.slotMinutes;
+                  final hour = widget.startHour + (minutesFromStart ~/ 60);
+                  final minute = minutesFromStart % 60;
 
-            return SizedBox(
-              height: widget.slotHeight,
-              child: Row(
-                children: [
-                  // Zeit-Gutter (links)
-                  Container(
-                    width: widget.timeGutterWidth,
+                  return Container(
+                    height: widget.slotHeight,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFBFBFB),
                       border: Border(
-                        right: gridLine,
-                        bottom: gridLine,
+                        right: borderSide,
+                        bottom: borderSide,
                       ),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 10),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}',
-                          style: TextStyle(
-                            fontSize: minute == 0 ? 13 : 11,
-                            fontWeight: minute == 0 ? FontWeight.w700 : FontWeight.w500,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                          ),
-                        ),
+                    padding: const EdgeInsets.only(left: 8),
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${hour.toString().padLeft(2,'0')}:${minute.toString().padLeft(2,'0')}',
+                      style: TextStyle(
+                        fontSize: minute == 0 ? 13 : 11,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
                       ),
                     ),
-                  ),
-
-                  // Tageszellen (rechts)
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        width: widget.dayColumnMinWidth * days.length,
-                        child: Row(
-                          children: [
-                            for (int dayIndex = 0; dayIndex < days.length; dayIndex++)
-                              SlotCell(
-                                width: widget.dayColumnMinWidth,
-                                slotStart: days[dayIndex].add(
-                                  Duration(hours: hour, minutes: minute),
-                                ),
-                                appointments: widget.appointments,
-                                onTapEmpty: widget.onTapEmptySlot,
-                                onOpenDetails: widget.onDoubleTapTermin,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                  );
+                }),
               ),
-            );
-          },
+            ),
+
+            // Tage (horizontal scroll)
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: days.map((day) {
+                    final dayStart = DateTime(day.year, day.month, day.day, widget.startHour, 0);
+                    final dayEnd = DateTime(day.year, day.month, day.day, widget.endHour, 0);
+
+                    final dayTermine = widget.appointments.where((t) {
+                      final s = t.start;
+                      return s.year == day.year && s.month == day.month && s.day == day.day;
+                    }).toList()
+                      ..sort((a, b) => a.start.compareTo(b.start));
+
+                    final laidOut = _layoutDay(dayTermine);
+
+                    return SizedBox(
+                      width: widget.dayColumnMinWidth,
+                      height: totalHeight,
+                      child: Stack(
+                        clipBehavior: Clip.hardEdge,
+                        children: [
+                          // Background grid + empty slot taps
+                          Column(
+                            children: List.generate(totalSlots, (i) {
+                              final slotStart = dayStart.add(Duration(minutes: i * widget.slotMinutes));
+                              final slotEnd = slotStart.add(Duration(minutes: widget.slotMinutes));
+
+                              final busy = dayTermine.any((t) =>
+                                  t.start.isBefore(slotEnd) && t.end.isAfter(slotStart));
+
+                              return InkWell(
+                                onTap: busy ? null : () => widget.onTapEmptySlot(slotStart),
+                                child: Container(
+                                  height: widget.slotHeight,
+                                  decoration: BoxDecoration(
+                                    border: Border(
+                                      right: borderSide,
+                                      bottom: borderSide,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+
+                          // Appointment overlays (echte Blöcke)
+                          for (final x in laidOut)
+                            Positioned(
+                              top: _topFor(x.t.start, dayStart),
+                              left: 6 + x.lane * _laneWidth(x.lanes),
+                              width: _laneWidth(x.lanes) - 6,
+                              height: _heightFor(x.t.start, x.t.end, dayStart, dayEnd),
+                              child: AppointmentBlock(
+                                a: x.t,
+                                onDoubleTap: widget.onDoubleTapTermin,
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
 
-    return Column(children: [header, grid]);
+    return Column(children: [header, body]);
   }
+
+  double _topFor(DateTime start, DateTime dayStart) {
+    final min = start.difference(dayStart).inMinutes;
+    final slots = min / widget.slotMinutes;
+    return (slots * widget.slotHeight).clamp(0, double.infinity);
+  }
+
+  double _heightFor(DateTime start, DateTime end, DateTime dayStart, DateTime dayEnd) {
+    final s = start.isBefore(dayStart) ? dayStart : start;
+    final e = end.isAfter(dayEnd) ? dayEnd : end;
+    final minutes = e.difference(s).inMinutes;
+    final h = (minutes / widget.slotMinutes) * widget.slotHeight;
+    return h < widget.slotHeight ? widget.slotHeight : h;
+  }
+
+  double _laneWidth(int lanes) => (widget.dayColumnMinWidth - 12) / lanes;
+
+  // ---------------------------
+  // Overlap-Layout pro Tag
+  // ---------------------------
+  List<_LaidTermin> _layoutDay(List<Termin> list) {
+    if (list.isEmpty) return [];
+
+    // Gruppen (überlappende Bereiche)
+    final sorted = List<Termin>.from(list)..sort((a, b) => a.start.compareTo(b.start));
+
+    final groups = <List<Termin>>[];
+    var current = <Termin>[];
+    DateTime currentEnd = sorted.first.end;
+
+    for (final t in sorted) {
+      if (current.isEmpty) {
+        current = [t];
+        currentEnd = t.end;
+        continue;
+      }
+      // overlap?
+      if (t.start.isBefore(currentEnd)) {
+        current.add(t);
+        if (t.end.isAfter(currentEnd)) currentEnd = t.end;
+      } else {
+        groups.add(current);
+        current = [t];
+        currentEnd = t.end;
+      }
+    }
+    if (current.isNotEmpty) groups.add(current);
+
+    // pro Gruppe Lanes greedy
+    final out = <_LaidTermin>[];
+    for (final g in groups) {
+      final lanesEnd = <DateTime>[];
+      final assigned = <Termin, int>{};
+
+      for (final t in g..sort((a, b) => a.start.compareTo(b.start))) {
+        int lane = lanesEnd.indexWhere((e) => !e.isAfter(t.start)); // e <= start
+        if (lane == -1) {
+          lane = lanesEnd.length;
+          lanesEnd.add(t.end);
+        } else {
+          lanesEnd[lane] = t.end;
+        }
+        assigned[t] = lane;
+      }
+
+      final laneCount = lanesEnd.length;
+      for (final t in g) {
+        out.add(_LaidTermin(t: t, lane: assigned[t]!, lanes: laneCount));
+      }
+    }
+    return out;
+  }
+}
+
+class _LaidTermin {
+  final Termin t;
+  final int lane;
+  final int lanes;
+  _LaidTermin({required this.t, required this.lane, required this.lanes});
 }
