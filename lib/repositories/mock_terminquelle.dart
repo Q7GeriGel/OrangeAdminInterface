@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+
 import '../models/termin.dart';
 import 'terminquelle.dart';
 
@@ -37,11 +38,11 @@ class MockTerminquelle implements Terminquelle {
     }
 
     String randomStatus() {
-      // bisschen “realistisch”: meistens bestätigt
-      final roll = r.nextInt(100);
-      if (roll < 70) return Termin.statusBestaetigt;
-      if (roll < 85) return Termin.statusOffen;
-      return Termin.statusAbgesagt;
+      // bisschen realistischer verteilt
+      final x = r.nextInt(100);
+      if (x < 10) return Termin.statusAbgesagt;     // 10%
+      if (x < 55) return Termin.statusBestaetigt;   // 45%
+      return Termin.statusOffen;                    // 45%
     }
 
     DateTime dayOf(int dayIndex) =>
@@ -77,13 +78,16 @@ class MockTerminquelle implements Terminquelle {
           end: end,
           kundeName: knd,
           mitarbeiterName: emp,
-          status: randomStatus(),
+          status: randomStatus(), // ✅ REQUIRED
           color: colorForMitarbeiter(emp),
+          service: r.nextBool() ? 'Haarschnitt' : 'Bart',
+          price: r.nextBool() ? 25.0 : 35.0,
         ),
       );
     }
 
     termine.sort((a, b) => a.start.compareTo(b.start));
+
     _cache[k] = termine;
     return termine;
   }

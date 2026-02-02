@@ -1,5 +1,7 @@
 import '../models/termin.dart';
 import '../repositories/terminquelle.dart';
+import 'package:flutter/material.dart';
+
 
 class TerminplanService {
   final Terminquelle quelle;
@@ -11,32 +13,46 @@ class TerminplanService {
   Future<void> speichereWoche(DateTime monday, List<Termin> termine) =>
       quelle.speichereWoche(monday, termine);
 
+  // Helper: findet Montag der Woche
   DateTime mondayOf(DateTime d) {
     final dd = DateTime(d.year, d.month, d.day);
     final diff = dd.weekday - DateTime.monday;
     return dd.subtract(Duration(days: diff));
   }
 
-  Future<Termin> createTerminAt(DateTime slotStart, {int minutes = 30}) async {
+  // ✅ wird von createTerminManual benutzt
+  Future<Termin> createTerminAt(
+    DateTime slotStart, {
+    int minutes = 30,
+    String kundeName = 'Neuer Kunde',
+    String mitarbeiterName = 'Aylin',
+    String status = Termin.statusOffen,
+    String? service,
+    double? price,
+    String? notes,
+    Color? color,
+  }) async {
     final monday = mondayOf(slotStart);
     final list = await ladeWoche(monday);
 
     final id = 'new_${DateTime.now().millisecondsSinceEpoch}';
-
     final t = Termin(
       id: id,
       start: slotStart,
       end: slotStart.add(Duration(minutes: minutes)),
-      kundeName: 'Neuer Kunde',
-      mitarbeiterName: 'Aylin',
-      status: Termin.statusOffen,
-      color: null,
+      kundeName: kundeName,
+      mitarbeiterName: mitarbeiterName,
+      status: status,
+      service: service,
+      price: price,
+      notes: notes,
+      color: color,
     );
 
     list.add(t);
     list.sort((a, b) => a.start.compareTo(b.start));
-    await speichereWoche(monday, list);
 
+    await speichereWoche(monday, list);
     return t;
   }
 

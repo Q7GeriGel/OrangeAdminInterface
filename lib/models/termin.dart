@@ -46,18 +46,19 @@ class Termin {
     String? notes,
     int? mitarbeiterId,
     Color? color,
-  }) =>
-      Termin(
-        id: id ?? this.id,
-        start: start ?? this.start,
-        end: end ?? this.end,
-        kundeName: kundeName ?? this.kundeName,
-        mitarbeiterName: mitarbeiterName ?? this.mitarbeiterName,
-        status: status ?? this.status,
-        service: service ?? this.service,
-        price: price ?? this.price,
-        notes: notes ?? this.notes,
-        mitarbeiterId: mitarbeiterId ?? this.mitarbeiterId,
-        color: color ?? this.color,
-      );
+  }) {
+    return Termin(
+      id: id ?? this.id,
+      start: start ?? this.start,
+      end: end ?? this.end,
+      kundeName: kundeName ?? this.kundeName,
+      mitarbeiterName: mitarbeiterName ?? this.mitarbeiterName,
+      status: status ?? this.status,
+      service: service ?? this.service,
+      price: price ?? this.price,
+      notes: notes ?? this.notes,
+      mitarbeiterId: mitarbeiterId ?? this.mitarbeiterId,
+      color: color ?? this.color,
+    );
+  }
 }

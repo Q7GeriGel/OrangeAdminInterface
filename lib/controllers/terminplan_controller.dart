@@ -31,7 +31,6 @@ class TerminplanController extends ChangeNotifier {
   List<FreiesZeitfenster> freie = [];
   List<String> aenderungen = [];
 
-  /// ✅ Wichtig: DateTime (damit BoxShared/Notizen nicht mit String crasht)
   DateTime tag = DateTime.now();
 
   DateTime _mondayOf(DateTime d) => service.mondayOf(d);
@@ -100,13 +99,50 @@ class TerminplanController extends ChangeNotifier {
   List<Termin> kommendeHeute({int limit = 6}) {
     final now = DateTime.now();
     final d0 = DateTime(now.year, now.month, now.day);
+
     final list = termine.where((t) {
       final s = t.start;
       final isToday = s.year == d0.year && s.month == d0.month && s.day == d0.day;
       return isToday && t.start.isAfter(now.subtract(const Duration(minutes: 1)));
     }).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
+
     return list.take(limit).toList();
+  }
+
+  // ✅ damit dashboard.dart nicht heult
+  int termineHeuteTotal({bool includeAbgesagt = false}) {
+    final d0 = DateTime(tag.year, tag.month, tag.day);
+
+    final list = termine.where((t) {
+      final s = t.start;
+      final sameDay = s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      if (!sameDay) return false;
+
+      if (includeAbgesagt) return true;
+      return t.status != Termin.statusAbgesagt;
+    }).toList();
+
+    return list.length;
+  }
+
+  String naechsterTerminHeuteLabel() {
+    final now = DateTime.now();
+    final d0 = DateTime(tag.year, tag.month, tag.day);
+
+    final today = termine.where((t) {
+      final s = t.start;
+      return s.year == d0.year && s.month == d0.month && s.day == d0.day;
+    }).toList()
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    final next = today.where((t) => t.start.isAfter(now)).toList();
+    final t = (next.isNotEmpty) ? next.first : (today.isNotEmpty ? today.first : null);
+
+    if (t == null) return 'Kein Termin heute';
+
+    final time = DateFormat('HH:mm').format(t.start);
+    return '${t.kundeName} • $time';
   }
 
   void _log(String text) {
@@ -115,6 +151,35 @@ class TerminplanController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ✅ HIER IST DEIN FIX: createTerminManual existiert jetzt
+  Future<void> createTerminManual({
+    required DateTime start,
+    required int minutes,
+    required String kundeName,
+    required String mitarbeiterName,
+    String status = Termin.statusOffen,
+    String? serviceName,
+    double? price,
+    String? notes,
+    Color? color,
+  }) async {
+    final t = await service.createTerminAt(
+      start,
+      minutes: minutes,
+      kundeName: kundeName,
+      mitarbeiterName: mitarbeiterName,
+      status: status,
+      service: serviceName,
+      price: price,
+      notes: notes,
+      color: color,
+    );
+
+    _log('Neu: ${t.kundeName} • ${DateFormat('HH:mm').format(t.start)}');
+    await ladeWoche(currentWeekMonday);
+  }
+
+  // alte Actions bleiben
   Future<void> createTerminAt(DateTime slotStart) async {
     final t = await service.createTerminAt(slotStart);
     _log('Neu: ${t.kundeName} • ${DateFormat('HH:mm').format(t.start)}');

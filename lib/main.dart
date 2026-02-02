@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'controllers/anmeldung_controller.dart';
 import 'controllers/notizen_controller.dart';
 import 'controllers/terminplan_controller.dart';
+import 'controllers/kunden_verwaltung.dart';
 
 import 'repositories/terminquelle.dart';
 import 'repositories/mock_terminquelle.dart';
@@ -31,6 +32,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        // Termine
         Provider<Terminquelle>(create: (_) => MockTerminquelle()),
         Provider<TerminplanService>(
           create: (ctx) => TerminplanService(quelle: ctx.read<Terminquelle>()),
@@ -39,12 +41,17 @@ class MyApp extends StatelessWidget {
           create: (ctx) => TerminplanController(ctx.read<TerminplanService>()),
         ),
 
+        // Kunden ✅ jetzt global
+        ChangeNotifierProvider<KundenVerwaltung>(
+          create: (_) => KundenVerwaltung(),
+        ),
+
+        // Auth/Notizen
         ChangeNotifierProvider(create: (_) => AnmeldungController()),
         ChangeNotifierProvider(create: (_) => NotizenController()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-
         locale: const Locale('de', 'DE'),
         supportedLocales: const [
           Locale('de', 'DE'),
@@ -55,12 +62,10 @@ class MyApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-
         theme: ThemeData(
           useMaterial3: true,
           colorSchemeSeed: const Color(0xFFCC5C4C),
         ),
-
         home: const AuthGate(),
       ),
     );

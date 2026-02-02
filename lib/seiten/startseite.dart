@@ -36,7 +36,6 @@ class _StartseiteState extends State<Startseite> {
     );
   }
 
-  /// Zentrale Stelle: welche Seite wird angezeigt?
   Widget _seiteFuerIndex(int index) {
     switch (index) {
       case 0:

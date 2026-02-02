@@ -21,13 +21,14 @@ class _BoxSharedState extends State<BoxShared> {
     super.initState();
     _c = TextEditingController();
 
-    // Notiz nach erstem Frame laden
-    final terminplan = context.read<TerminplanController>();
-    final notizen = context.read<NotizenController>();
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final terminplan = context.read<TerminplanController>();
+      final notizen = context.read<NotizenController>();
+
+      // tag ist bei dir DateTime (aber ich mach’s robust)
       final day = _asDate(terminplan.tag);
       await notizen.lade(day);
+
       if (mounted) setState(() {});
     });
   }
@@ -42,16 +43,14 @@ class _BoxSharedState extends State<BoxShared> {
     if (v is DateTime) return v;
 
     if (v is String) {
-      // 1) ISO (yyyy-mm-dd...)
       final iso = DateTime.tryParse(v);
-      if (iso != null) return iso;
+      if (iso != null) return DateTime(iso.year, iso.month, iso.day);
 
-      // 2) dd.MM.yyyy
       try {
-        return DateFormat('dd.MM.yyyy').parseStrict(v);
+        final d = DateFormat('dd.MM.yyyy').parseStrict(v);
+        return DateTime(d.year, d.month, d.day);
       } catch (_) {}
 
-      // 3) dd.MM (dann aktuelles Jahr)
       try {
         final d = DateFormat('dd.MM').parseStrict(v);
         final now = DateTime.now();
@@ -59,7 +58,8 @@ class _BoxSharedState extends State<BoxShared> {
       } catch (_) {}
     }
 
-    return DateTime.now();
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
   }
 
   @override
@@ -67,10 +67,8 @@ class _BoxSharedState extends State<BoxShared> {
     final terminplan = context.watch<TerminplanController>();
     final notizen = context.watch<NotizenController>();
 
-    // tag kann String ODER DateTime sein -> wir machen DateTime draus
     final day = _asDate(terminplan.tag);
 
-    // Text syncen
     if (_c.text != notizen.text) _c.text = notizen.text;
 
     return Card(
@@ -84,8 +82,13 @@ class _BoxSharedState extends State<BoxShared> {
               Row(
                 children: [
                   const Text(
-                    'Schreibe deine Gedanken nieder!!!',
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                    'Notizen',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    DateFormat('dd.MM.yyyy').format(day),
+                    style: TextStyle(color: Colors.black.withAlpha(140)),
                   ),
                   const Spacer(),
                   FilledButton.icon(
@@ -137,7 +140,7 @@ class DashboardEntry {
   const DashboardEntry(this.text, {this.accent, this.onTap});
 }
 
-class DashboardBox extends StatelessWidget {
+class DashboardBox extends StatefulWidget {
   final String titel;
   final List<DashboardEntry> eintraege;
   final double maxHeight;
@@ -150,6 +153,25 @@ class DashboardBox extends StatelessWidget {
     this.maxHeight = 220,
     this.icon,
   });
+
+  @override
+  State<DashboardBox> createState() => _DashboardBoxState();
+}
+
+class _DashboardBoxState extends State<DashboardBox> {
+  late final ScrollController _scrollCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -168,13 +190,13 @@ class DashboardBox extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon ?? Icons.info, color: Colors.white, size: 18),
+              Icon(widget.icon ?? Icons.info, color: Colors.white, size: 18),
               const SizedBox(width: 8),
               Text(
-                titel,
+                widget.titel,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
@@ -190,18 +212,21 @@ class DashboardBox extends StatelessWidget {
           ),
           padding: const EdgeInsets.all(12),
           child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
+            constraints: BoxConstraints(maxHeight: widget.maxHeight),
             child: Scrollbar(
+              controller: _scrollCtrl, // ✅ wichtig
               thumbVisibility: true,
               thickness: 8,
               radius: const Radius.circular(999),
               child: Padding(
                 padding: const EdgeInsets.only(right: 10),
                 child: ListView.separated(
-                  itemCount: eintraege.length,
+                  controller: _scrollCtrl, // ✅ wichtig
+                  primary: false, // ✅ wichtig bei nested scrolls
+                  itemCount: widget.eintraege.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (_, i) {
-                    final e = eintraege[i];
+                    final e = widget.eintraege[i];
                     final accent = e.accent ?? orange;
                     final clickable = e.onTap != null;
 
@@ -211,7 +236,7 @@ class DashboardBox extends StatelessWidget {
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
                         onTap: e.onTap,
-                        child: Container(
+                        child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           child: Row(
                             children: [
@@ -228,6 +253,7 @@ class DashboardBox extends StatelessWidget {
                                 child: Text(
                                   e.text,
                                   style: const TextStyle(fontWeight: FontWeight.w700),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (clickable)

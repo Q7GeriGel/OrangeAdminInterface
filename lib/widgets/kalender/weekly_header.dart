@@ -36,10 +36,7 @@ class WeeklyHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             shape: const StadiumBorder(),
           ),
-          child: const Text(
-            'Heute',
-            style: TextStyle(fontWeight: FontWeight.w800),
-          ),
+          child: const Text('Heute', style: TextStyle(fontWeight: FontWeight.w800)),
         ),
 
         const SizedBox(width: 8),
@@ -49,10 +46,7 @@ class WeeklyHeader extends StatelessWidget {
             border: Border.all(color: Colors.black.withAlpha(25)),
             borderRadius: BorderRadius.circular(999),
           ),
-          child: Text(
-            rangeText,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
+          child: Text(rangeText, style: const TextStyle(fontWeight: FontWeight.w700)),
         ),
         const SizedBox(width: 8),
 
@@ -70,16 +64,19 @@ class _IconChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.black.withAlpha(25)),
-          borderRadius: BorderRadius.circular(999),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.black.withAlpha(25)),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Icon(icon, size: 20),
         ),
-        child: Icon(icon, size: 20),
       ),
     );
   }

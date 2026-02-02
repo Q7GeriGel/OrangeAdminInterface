@@ -3,9 +3,16 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/terminplan_controller.dart';
+import '../controllers/kunden_verwaltung.dart';
+import '../models/kunde.dart';
+
 import '../dashboard/box_bevorstehende_kunden.dart';
 import '../dashboard/box_aktuelle_aenderung.dart';
 import '../dashboard/box_freie_zeitfenster.dart';
+import '../dashboard/box_shared.dart';
+
+import '../widgets/kalender/termin_create_dialog.dart';
+import '../widgets/kunde_dialog.dart';
 
 class DashboardPage extends StatelessWidget {
   final String benutzername;
@@ -14,17 +21,29 @@ class DashboardPage extends StatelessWidget {
 
   static const _bg = Color(0xFFF4F4F4);
   static const _orange = Color(0xFFCC5C4C);
+  static const _blue = Color(0xFF335776);
+  static const _violet = Color(0xFF6E61A8);
 
   @override
   Widget build(BuildContext context) {
-    // live count (weil Provider sowieso vorhanden ist – BoxFreieZeitfenster nutzt ihn auch)
-    final freieCount = context.select<TerminplanController, int>((c) => c.freie.length);
+    final ctrl = context.watch<TerminplanController>();
     final todayText = DateFormat('EEEE, dd.MM.yyyy', 'de_DE').format(DateTime.now());
 
-    void toast(String msg) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
+    final messenger = ScaffoldMessenger.of(context);
+
+    Future<void> openNewKunde() async {
+      final verwaltung = context.read<KundenVerwaltung>();
+
+      final res = await showDialog<Kunde>(
+        context: context,
+        barrierDismissible: false,
+        builder: (c) => KundeDialog(initial: null, friseure: verwaltung.friseure),
       );
+
+      if (res == null) return;
+
+      verwaltung.hinzufuegen(res);
+      messenger.showSnackBar(SnackBar(content: Text('Kunde erstellt: ${res.name}')));
     }
 
     return Scaffold(
@@ -38,13 +57,12 @@ class DashboardPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // --- TOP HEADER (macht direkt “App-Feeling”) ---
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: _WelcomeHeader(benutzername: benutzername)),
                       const SizedBox(width: 12),
-                      // Rechts: Datum + Quick Actions
+
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
@@ -67,28 +85,34 @@ class DashboardPage extends StatelessWidget {
                               children: [
                                 Icon(Icons.today, size: 18, color: _orange),
                                 const SizedBox(width: 8),
-                                Text(
-                                  todayText,
-                                  style: const TextStyle(fontWeight: FontWeight.w800),
-                                ),
+                                Text(todayText, style: const TextStyle(fontWeight: FontWeight.w800)),
                               ],
                             ),
                           ),
                           const SizedBox(height: 10),
+
                           Wrap(
                             spacing: 10,
                             runSpacing: 10,
                             alignment: WrapAlignment.end,
                             children: [
                               OutlinedButton.icon(
-                                onPressed: () => toast('Quick Action kommt gleich 😄'),
+                                onPressed: () => openCreateTerminFlow(context: context, ctrl: ctrl),
                                 icon: const Icon(Icons.add),
                                 label: const Text('Neuer Termin'),
                               ),
                               FilledButton.icon(
-                                onPressed: () => toast('Quick Action kommt gleich 😄'),
+                                onPressed: openNewKunde,
                                 icon: const Icon(Icons.person_add),
                                 label: const Text('Neuer Kunde'),
+                              ),
+                              IconButton(
+                                tooltip: 'Heute aktualisieren',
+                                onPressed: () {
+                                  ctrl.goToday();
+                                  messenger.showSnackBar(const SnackBar(content: Text('Aktualisiert ✅')));
+                                },
+                                icon: const Icon(Icons.refresh),
                               ),
                             ],
                           ),
@@ -98,6 +122,7 @@ class DashboardPage extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 6),
+
                   Text(
                     "Hier ist dein Tagesplan:",
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -107,35 +132,39 @@ class DashboardPage extends StatelessWidget {
 
                   const SizedBox(height: 14),
 
-                  // --- MINI STATS (macht’s lebendig, ohne DB) ---
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,
                     children: [
-                      _MiniStat(
-                        icon: Icons.timer,
-                        label: 'Freie Slots',
-                        value: freieCount.toString(),
+                      _KpiCard(
+                        icon: Icons.event_available,
+                        label: 'Termine heute',
+                        value: ctrl.termineHeuteTotal().toString(),
                         accent: _orange,
                       ),
-                      _MiniStat(
-                        icon: Icons.sync,
-                        label: 'Status',
-                        value: 'bereit',
-                        accent: const Color(0xFF335776),
+                      _KpiCard(
+                        icon: Icons.schedule,
+                        label: 'Nächster Termin',
+                        value: ctrl.naechsterTerminHeuteLabel(),
+                        accent: _blue,
                       ),
-                      _MiniStat(
-                        icon: Icons.wb_sunny,
-                        label: 'Heute',
-                        value: DateFormat('dd.MM').format(DateTime.now()),
-                        accent: const Color(0xFF6E61A8),
+                      _KpiCard(
+                        icon: Icons.timer,
+                        label: 'Freie Slots',
+                        value: ctrl.freie.length.toString(),
+                        accent: _violet,
+                      ),
+                      _KpiCard(
+                        icon: Icons.sync,
+                        label: 'Änderungen',
+                        value: ctrl.aenderungen.length.toString(),
+                        accent: const Color(0xFF2E7DDB),
                       ),
                     ],
                   ),
 
                   const SizedBox(height: 18),
 
-                  // --- 2 BOXEN OBEN (responsive) ---
                   LayoutBuilder(
                     builder: (context, c) {
                       final isNarrow = c.maxWidth < 900;
@@ -163,11 +192,19 @@ class DashboardPage extends StatelessWidget {
 
                   const SizedBox(height: 26),
 
-                  // --- Freie Zeitfenster ---
                   Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 720),
                       child: const BoxFreieZeitfenster(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: const BoxShared(),
                     ),
                   ),
                 ],
@@ -210,8 +247,8 @@ class _WelcomeHeader extends StatelessWidget {
   }
 }
 
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({
+class _KpiCard extends StatelessWidget {
+  const _KpiCard({
     required this.icon,
     required this.label,
     required this.value,
@@ -226,7 +263,7 @@ class _MiniStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 240,
+      width: 280,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -243,8 +280,8 @@ class _MiniStat extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
               color: accent.withAlpha(26),
               borderRadius: BorderRadius.circular(12),
@@ -260,6 +297,8 @@ class _MiniStat extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
                 ),
               ],

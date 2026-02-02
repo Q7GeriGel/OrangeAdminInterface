@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
 import '../widgets/kunden_tabelle.dart';
@@ -13,7 +15,6 @@ class KundenSeite extends StatefulWidget {
 }
 
 class _KundenSeiteState extends State<KundenSeite> {
-  final verwaltung = KundenVerwaltung();
   final sucheCtrl = TextEditingController();
   final datumFmt = DateFormat('dd.MM.yyyy');
 
@@ -23,20 +24,23 @@ class _KundenSeiteState extends State<KundenSeite> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ Suche -> direkt in Provider schreiben (kein setState nötig)
     sucheCtrl.addListener(() {
+      final verwaltung = context.read<KundenVerwaltung>();
       verwaltung.sucheSetzen(sucheCtrl.text);
-      setState(() {});
     });
   }
 
   @override
   void dispose() {
     sucheCtrl.dispose();
-    verwaltung.dispose();
     super.dispose();
   }
 
   Future<void> _filterDialog() async {
+    final verwaltung = context.read<KundenVerwaltung>();
+
     bool? nurStamm = verwaltung.nurStammkunden;
     String? friseur = verwaltung.friseur;
 
@@ -57,7 +61,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                   items: const [
                     DropdownMenuItem(value: null, child: Text('Egal')),
                     DropdownMenuItem(value: true, child: Text('Nur Stammkunden')),
-                    DropdownMenuItem(value: false, child: Text('Nur Nicht‑Stammkunden')),
+                    DropdownMenuItem(value: false, child: Text('Nur Nicht-Stammkunden')),
                   ],
                   onChanged: (v) => nurStamm = v,
                 ),
@@ -71,8 +75,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                   hint: const Text('Egal'),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Egal')),
-                    ...verwaltung.friseure
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    ...verwaltung.friseure.map((s) => DropdownMenuItem(value: s, child: Text(s)))
                   ],
                   onChanged: (v) => friseur = v,
                 ),
@@ -86,7 +89,6 @@ class _KundenSeiteState extends State<KundenSeite> {
             onPressed: () {
               verwaltung.filterSetzen(nurStammkunden: nurStamm, friseur: friseur);
               Navigator.pop(context);
-              setState(() {});
             },
             child: const Text('Übernehmen'),
           ),
@@ -96,21 +98,29 @@ class _KundenSeiteState extends State<KundenSeite> {
   }
 
   Future<void> _dialogHinzufuegenBearbeiten({Kunde? bearbeiten}) async {
+    final verwaltung = context.read<KundenVerwaltung>();
+
     final result = await showDialog<Kunde>(
       context: context,
       barrierDismissible: false,
-      builder: (c) => KundeDialog(initial: bearbeiten, friseure: verwaltung.friseure),
+      builder: (c) => KundeDialog(
+        initial: bearbeiten,
+        friseure: verwaltung.friseure,
+      ),
     );
+
     if (result == null) return;
+
     if (bearbeiten == null) {
       verwaltung.hinzufuegen(result);
     } else {
       verwaltung.bearbeiten(result);
     }
-    setState(() {});
   }
 
   Future<void> _naechstenTerminWaehlen(Kunde k) async {
+    final verwaltung = context.read<KundenVerwaltung>();
+
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -118,17 +128,29 @@ class _KundenSeiteState extends State<KundenSeite> {
       firstDate: DateTime(now.year - 2),
       lastDate: DateTime(now.year + 3),
     );
-    if (picked != null) {
-      final u = k.kopie()..naechsterTermin = picked;
-      verwaltung.bearbeiten(u);
-      setState(() {});
-    }
+
+    if (picked == null) return;
+
+    // ✅ ohne k.kopie() (damit’s überall safe ist)
+    final updated = Kunde(
+      id: k.id,
+      name: k.name,
+      telefonnummer: k.telefonnummer,
+      stammkunde: k.stammkunde,
+      bevorzugterFriseur: k.bevorzugterFriseur,
+      letzterHaarschnitt: k.letzterHaarschnitt,
+      naechsterTermin: picked,
+    );
+
+    verwaltung.bearbeiten(updated);
   }
 
   @override
   Widget build(BuildContext context) {
-    const pageBg = Color(0xFFECEDEE); // hellgrau
-    const panelBlau = Color(0xFF355573); // dunkles Blau
+    final verwaltung = context.watch<KundenVerwaltung>();
+
+    const pageBg = Color(0xFFECEDEE);
+    const panelBlau = Color(0xFF355573);
     const weiss = Colors.white;
 
     return Container(
@@ -167,8 +189,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                                 child: TextField(
                                   controller: sucheCtrl,
                                   decoration: const InputDecoration(
-                                    hintText:
-                                        'Suche bei Name, Telefonnummer oder Datum des letzten Haarschnittes',
+                                    hintText: 'Suche bei Name, Telefonnummer oder Datum des letzten Haarschnittes',
                                     border: InputBorder.none,
                                   ),
                                 ),
@@ -178,13 +199,14 @@ class _KundenSeiteState extends State<KundenSeite> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Filter (Kreis)
+
+                      // Filter
                       SizedBox(
                         width: topHeight,
                         height: topHeight,
                         child: ClipOval(
                           child: Material(
-                            color: weiss.withValues(alpha: 0.2),
+                            color: weiss.withAlpha(50),
                             child: IconButton(
                               tooltip: 'Filter',
                               onPressed: _filterDialog,
@@ -194,6 +216,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                         ),
                       ),
                       const SizedBox(width: 12),
+
                       // Neuer Kunde
                       TextButton.icon(
                         onPressed: () => _dialogHinzufuegenBearbeiten(),
@@ -219,7 +242,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Weißer Inhalt mit Tabelle
+                  // Tabelle
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
@@ -231,9 +254,8 @@ class _KundenSeiteState extends State<KundenSeite> {
                         child: KundenTabelle(
                           kunden: verwaltung.kunden,
                           datumFmt: datumFmt,
-                          onBearbeiten: (k) =>
-                              _dialogHinzufuegenBearbeiten(bearbeiten: k),
-                          onLoeschen: (k) => setState(() => verwaltung.loeschen(k.id)),
+                          onBearbeiten: (k) => _dialogHinzufuegenBearbeiten(bearbeiten: k),
+                          onLoeschen: (k) => context.read<KundenVerwaltung>().loeschen(k.id),
                           onTermin: _naechstenTerminWaehlen,
                           minLinien: 14,
                         ),
