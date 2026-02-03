@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'theme/app_tokens.dart';
 
 class AppCard extends StatelessWidget {
-  // ✅ optional, damit alte Aufrufe ohne title weiter funktionieren
   final String? title;
+  final String? subtitle;
   final IconData? icon;
-  final Widget? trailing;
+  final List<Widget>? actions;
 
   final Widget child;
   final EdgeInsets padding;
@@ -13,8 +13,9 @@ class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
     this.title,
+    this.subtitle,
     this.icon,
-    this.trailing,
+    this.actions,
     required this.child,
     this.padding = const EdgeInsets.all(16),
   });
@@ -25,40 +26,62 @@ class AppCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadii.r18),
+        border: Border.all(color: colors.border),
         boxShadow: AppShadows.card,
-        border: Border.all(
-          color: colors.isDark
-              ? colors.scheme.outlineVariant.withValues(alpha: 0.35)
-              : colors.scheme.outlineVariant.withValues(alpha: 0.6),
-        ),
+        gradient: colors.isDark
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  colors.scheme.surface.withOpacity(0.98),
+                  colors.scheme.surface.withOpacity(0.82),
+                ],
+              )
+            : null,
+        color: colors.isDark ? null : colors.scheme.surface,
       ),
       padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (title != null) ...[
+          if (title != null || actions != null)
             Row(
               children: [
                 if (icon != null) ...[
                   Icon(icon, color: AppColors.orange),
-                  const SizedBox(width: AppGaps.s12),
+                  const SizedBox(width: AppGaps.s10),
                 ],
-                Expanded(
-                  child: Text(
-                    title!,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
+                if (title != null)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title!,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle!,
+                            style: TextStyle(
+                              color: colors.scheme.onSurface.withOpacity(0.70),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                ),
-                if (trailing != null) trailing!,
+                if (actions != null) ...actions!,
               ],
             ),
-            const SizedBox(height: AppGaps.s12),
-          ],
+          if (title != null || actions != null) const SizedBox(height: AppGaps.s12),
           child,
         ],
       ),

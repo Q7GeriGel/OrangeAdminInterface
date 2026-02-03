@@ -21,7 +21,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get employees => 'Mitarbeiter';
 
   @override
-  String get schedule => 'Terminübersicht';
+  String get schedule => 'Termine';
 
   @override
   String get statistics => 'Statistik';
@@ -33,59 +33,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get save => 'Speichern';
 
   @override
-  String get logout => 'Abmelden';
+  String get logout => 'Logout';
 
   @override
   String get language => 'Sprache';
 
   @override
-  String get darkMode => 'Dunkelmodus';
-
-  @override
-  String get statsRange => 'Zeitraum';
-
-  @override
-  String get range7 => 'Letzte 7 Tage';
-
-  @override
-  String get range30 => 'Letzte 30 Tage';
-
-  @override
-  String get kpiAppointmentsToday => 'Termine heute';
-
-  @override
-  String get kpiAppointmentsRange => 'Termine im Zeitraum';
-
-  @override
-  String get kpiRevenueRange => 'Umsatz im Zeitraum';
-
-  @override
-  String get kpiUtilization => 'Auslastung';
-
-  @override
-  String get kpiNoShowRate => 'No-Show-Quote';
-
-  @override
-  String get kpiAvgDuration => 'Ø Dauer';
-
-  @override
-  String get chartAppointmentsByDay => 'Termine pro Tag';
-
-  @override
-  String get chartRevenueTrend => 'Umsatztrend';
-
-  @override
-  String get chartStatusShare => 'Statusverteilung';
-
-  @override
-  String get topServices => 'Top Leistungen';
-
-  @override
-  String get service => 'Leistung';
-
-  @override
-  String get count => 'Anzahl';
-
-  @override
-  String get revenue => 'Umsatz';
+  String get darkMode => 'Dark Mode';
 }

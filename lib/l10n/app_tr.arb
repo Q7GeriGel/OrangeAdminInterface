@@ -7,29 +7,8 @@
   "schedule": "Randevu Görünümü",
   "statistics": "İstatistik",
   "settings": "Ayarlar",
-
   "save": "Kaydet",
   "logout": "Çıkış",
   "language": "Dil",
-  "darkMode": "Karanlık Mod",
-
-  "statsRange": "Aralık",
-  "range7": "Son 7 gün",
-  "range30": "Son 30 gün",
-
-  "kpiAppointmentsToday": "Bugünkü randevular",
-  "kpiAppointmentsRange": "Aralık randevuları",
-  "kpiRevenueRange": "Aralık ciro",
-  "kpiUtilization": "Doluluk",
-  "kpiNoShowRate": "Gelmedi oranı",
-  "kpiAvgDuration": "Ortalama süre",
-
-  "chartAppointmentsByDay": "Günlere göre randevu",
-  "chartRevenueTrend": "Ciro trendi",
-  "chartStatusShare": "Durum dağılımı",
-
-  "topServices": "En çok satılan hizmetler",
-  "service": "Hizmet",
-  "count": "Adet",
-  "revenue": "Ciro"
+  "darkMode": "Karanlık Mod"
 }

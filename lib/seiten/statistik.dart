@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+
+import '../widgets/app_card.dart';
 import '../widgets/app_page.dart';
 import '../widgets/theme/app_tokens.dart';
+
+enum StatsRange { week, month, year }
 
 class StatistikSeite extends StatefulWidget {
   const StatistikSeite({super.key});
@@ -9,202 +14,321 @@ class StatistikSeite extends StatefulWidget {
   State<StatistikSeite> createState() => _StatistikSeiteState();
 }
 
-enum Zeitraum { woche, monat, jahr }
-
 class _StatistikSeiteState extends State<StatistikSeite> {
-  Zeitraum _zeitraum = Zeitraum.woche;
+  StatsRange _range = StatsRange.week;
 
-  // Mock-Daten (später Provider/DB)
-  // Umsatz je Tag (7 Tage)
-  final List<double> _umsatzWoche = const [820, 760, 910, 540, 1120, 980, 640];
-
-  // Monatswerte (12 Balken)
-  final List<double> _umsatzMonat = const [7200, 6800, 7900, 6100, 8800, 9400, 8700, 7600, 9900, 10200, 9200, 8400];
-
-  // Jahreswerte (5 Jahre Trend)
-  final List<double> _umsatzJahr = const [85000, 92000, 98000, 105000, 112000];
-
-  // Service-Mix
-  final Map<String, double> _services = const {
-    "Haarschnitt": 0.42,
-    "Bart": 0.18,
-    "Farbe": 0.22,
-    "Styling": 0.10,
-    "Sonstiges": 0.08,
-  };
-
-  // Mitarbeiter KPI
-  final List<_MitarbeiterStat> _team = const [
-    _MitarbeiterStat("Sinan", 34, 0.82, 2),
-    _MitarbeiterStat("Alperen", 29, 0.76, 1),
-    _MitarbeiterStat("Emre", 25, 0.71, 3),
-    _MitarbeiterStat("Muhammed", 21, 0.64, 2),
-  ];
+  // Accent (wie in deinen Screens)
+  static const _accent = Color(0xFFC95B4C);
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final panelBg = isDark ? const Color(0xFF151A21) : Colors.white;
-    final panelBorder = isDark ? Colors.white10 : Colors.black12;
-    final textMain = isDark ? Colors.white : Colors.black;
-    final textSub = isDark ? Colors.white70 : Colors.black54;
-
     return AppPage(
-      title: "Statistik",
+      title: 'Statistik',
       actions: [
-        _ZeitraumSwitch(
-          value: _zeitraum,
-          onChanged: (z) => setState(() => _zeitraum = z),
+        SegmentedButton<StatsRange>(
+          segments: const [
+            ButtonSegment(value: StatsRange.week, label: Text('Woche')),
+            ButtonSegment(value: StatsRange.month, label: Text('Monat')),
+            ButtonSegment(value: StatsRange.year, label: Text('Jahr')),
+          ],
+          selected: {_range},
+          onSelectionChanged: (s) => setState(() => _range = s.first),
         ),
       ],
-      child: Column(
-        children: [
-          // KPIs
-          LayoutBuilder(
-            builder: (context, c) {
-              final wide = c.maxWidth >= 1050;
-              final cols = wide ? 4 : 2;
 
-              return GridView.count(
-                crossAxisCount: cols,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: AppGaps.s18,
-                mainAxisSpacing: AppGaps.s18,
-                childAspectRatio: wide ? 2.6 : 2.4,
+      // ✅ WICHTIG: ListView => KEIN Overflow mehr
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final isWide = c.maxWidth >= 1100;
+
+          final kpi = _mockKpis(_range);
+          final revenueByDay = _mockRevenueByDay(_range);
+          final totalRevenue = revenueByDay.fold<double>(0, (a, b) => a + b);
+
+          final idle = _mockIdleByDay(_range); // Minuten pro Tag
+          final idleTotalMin = idle.fold<int>(0, (a, b) => a + b);
+
+          final left = Column(
+            children: [
+              // KPI Row (wie dein Original)
+              Row(
                 children: [
-                  _KpiCard(
-                    bg: panelBg,
-                    border: panelBorder,
-                    title: "Termine",
-                    value: _zeitraum == Zeitraum.woche ? "178" : _zeitraum == Zeitraum.monat ? "734" : "8.940",
-                    subtitle: "gebucht",
-                    icon: Icons.event_available_outlined,
-                    valueColor: AppColors.orange,
-                    textMain: textMain,
-                    textSub: textSub,
-                  ),
-                  _KpiCard(
-                    bg: panelBg,
-                    border: panelBorder,
-                    title: "Auslastung",
-                    value: _zeitraum == Zeitraum.woche ? "78%" : _zeitraum == Zeitraum.monat ? "74%" : "71%",
-                    subtitle: "Durchschnitt",
-                    icon: Icons.speed_outlined,
-                    valueColor: const Color(0xFF22C55E),
-                    textMain: textMain,
-                    textSub: textSub,
-                  ),
-                  _KpiCard(
-                    bg: panelBg,
-                    border: panelBorder,
-                    title: "No-Shows",
-                    value: _zeitraum == Zeitraum.woche ? "11" : _zeitraum == Zeitraum.monat ? "39" : "410",
-                    subtitle: "nicht erschienen",
-                    icon: Icons.person_off_outlined,
-                    valueColor: const Color(0xFFF97316),
-                    textMain: textMain,
-                    textSub: textSub,
-                  ),
-                  _KpiCard(
-                    bg: panelBg,
-                    border: panelBorder,
-                    title: "Umsatz",
-                    value: _formatEuro(_aktuellerUmsatz()),
-                    subtitle: _zeitraum == Zeitraum.woche ? "letzte 7 Tage" : _zeitraum == Zeitraum.monat ? "12 Monate" : "5 Jahre",
-                    icon: Icons.payments_outlined,
-                    valueColor: const Color(0xFF60A5FA),
-                    textMain: textMain,
-                    textSub: textSub,
-                  ),
+                  Expanded(child: _kpiCard(icon: Icons.event_available, title: 'Termine', value: '${kpi.termine}', sub: 'gebucht')),
+                  const SizedBox(width: 16),
+                  Expanded(child: _kpiCard(icon: Icons.speed, title: 'Auslastung', value: '${kpi.auslastung}%', sub: 'Durchschnitt', valueColor: Colors.green)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _kpiCard(icon: Icons.person_off, title: 'No-Shows', value: '${kpi.noShows}', sub: 'nicht erschienen', valueColor: Colors.orange)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _kpiCard(icon: Icons.payments_outlined, title: 'Umsatz', value: _eur(kpi.umsatz), sub: _rangeLabel(_range))),
                 ],
-              );
-            },
-          ),
+              ),
 
-          const SizedBox(height: AppGaps.s18),
+              const SizedBox(height: 18),
 
-          // Charts + Service Mix
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Umsatz-Verlauf
-                Expanded(
-                  flex: 2,
-                  child: _Panel(
-                    bg: panelBg,
-                    border: panelBorder,
-                    title: "Umsatz-Verlauf",
-                    subtitle: "Trend nach Zeitraum",
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: _BarChart(
-                        values: _chartValues(),
-                        labelCount: _labelCount(),
-                        barColor: AppColors.orange,
-                        textColor: textSub,
-                        axisColor: isDark ? Colors.white24 : Colors.black12,
+              // Umsatz-Verlauf (wie vorher) + "Gesamt" oben rechts (ohne Layout zu zerstören)
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Umsatz-Verlauf', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                              SizedBox(height: 6),
+                              Text('Trend nach Zeitraum', style: TextStyle(fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: _accent.withValues(alpha: 0.35)),
+                            color: _accent.withValues(alpha: 0.10),
+                          ),
+                          child: Text(
+                            'Gesamt: ${_eur(totalRevenue)}',
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // kleiner als vorher + immer safe
+                    SizedBox(
+                      height: 240,
+                      child: BarChart(
+                        BarChartData(
+                          gridData: const FlGridData(show: false),
+                          borderData: FlBorderData(
+                            show: true,
+                            border: Border(
+                              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+                            ),
+                          ),
+                          titlesData: FlTitlesData(
+                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 26,
+                                getTitlesWidget: (value, meta) {
+                                  const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+                                  final i = value.toInt();
+                                  if (i < 0 || i > 6) return const SizedBox.shrink();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 10),
+                                    child: Text(days[i], style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          barGroups: List.generate(7, (i) {
+                            return BarChartGroupData(
+                              x: i,
+                              barRods: [
+                                BarChartRodData(
+                                  toY: revenueByDay[i],
+                                  width: 26,
+                                  borderRadius: BorderRadius.circular(10),
+                                  color: _accent.withValues(alpha: 0.85),
+                                ),
+                              ],
+                            );
+                          }),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: AppGaps.s18),
+              ),
 
-                // Service Mix + Team
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: _Panel(
-                          bg: panelBg,
-                          border: panelBorder,
-                          title: "Service-Mix",
-                          subtitle: "Anteil nach Leistung",
-                          child: ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _services.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 12),
-                            itemBuilder: (context, i) {
-                              final key = _services.keys.elementAt(i);
-                              final v = _services.values.elementAt(i);
-                              return _ServiceRow(
-                                label: key,
-                                value: v,
-                                textMain: textMain,
-                                textSub: textSub,
-                              );
-                            },
+              const SizedBox(height: 18),
+
+              // ✅ Leerlaufanalyse ordentlich (Diplomarbeit-relevant)
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Leerlaufanalyse', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Gesamter Leerlauf im Zeitraum: ${_hm(idleTotalMin)}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 14),
+
+                    SizedBox(
+                      height: 160,
+                      child: BarChart(
+                        BarChartData(
+                          gridData: const FlGridData(show: false),
+                          borderData: FlBorderData(
+                            show: true,
+                            border: Border(
+                              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
+                            ),
                           ),
+                          titlesData: FlTitlesData(
+                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 22,
+                                getTitlesWidget: (value, meta) {
+                                  const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+                                  final i = value.toInt();
+                                  if (i < 0 || i > 6) return const SizedBox.shrink();
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(days[i], style: const TextStyle(fontWeight: FontWeight.w700)),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          barGroups: List.generate(7, (i) {
+                            return BarChartGroupData(
+                              x: i,
+                              barRods: [
+                                BarChartRodData(
+                                  toY: (idle[i] / 60.0), // Stunden
+                                  width: 20,
+                                  borderRadius: BorderRadius.circular(10),
+                                  color: Colors.blueGrey.withValues(alpha: 0.55),
+                                ),
+                              ],
+                            );
+                          }),
                         ),
                       ),
-                      const SizedBox(height: AppGaps.s18),
-                      Expanded(
-                        child: _Panel(
-                          bg: panelBg,
-                          border: panelBorder,
-                          title: "Mitarbeiter",
-                          subtitle: "Termine • Auslastung • No-Shows",
-                          child: ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _team.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 12),
-                            itemBuilder: (context, i) {
-                              final m = _team[i];
-                              return _TeamTile(
-                                stat: m,
-                                textMain: textMain,
-                                textSub: textSub,
-                              );
-                            },
-                          ),
-                        ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // kurze “Interpretation” fürs Diplomarbeit-Feeling
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.white.withValues(alpha: 0.04),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                       ),
-                    ],
-                  ),
+                      child: const Text(
+                        'Interpretation (Mock): Hoher Leerlauf an bestimmten Tagen/Zeitslots deutet auf Optimierungspotenzial hin '
+                        '(z.B. Personalplanung, Termin-Slots bündeln, Aktionen in schwachen Zeiten).',
+                        style: TextStyle(fontWeight: FontWeight.w600, height: 1.35),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+            ],
+          );
+
+          final right = Column(
+            children: [
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Service-Mix', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 6),
+                    const Text('Anteil nach Leistung', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 14),
+                    _serviceRow('Haarschnitt', 0.42),
+                    const SizedBox(height: 12),
+                    _serviceRow('Bart', 0.18),
+                    const SizedBox(height: 12),
+                    _serviceRow('Farbe', 0.22),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Mitarbeiter', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 6),
+                    const Text('Termine · Auslastung · No-Shows (Mock)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 14),
+                    _staffTile('Sinan', '34 Termine · 82%', 'No-Shows: 2'),
+                    const SizedBox(height: 12),
+                    _staffTile('Alperen', '28 Termine · 76%', 'No-Shows: 1'),
+                    const SizedBox(height: 12),
+                    _staffTile('Emre', '31 Termine · 79%', 'No-Shows: 2'),
+                  ],
+                ),
+              ),
+            ],
+          );
+
+          return ListView(
+            children: [
+              if (isWide)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: left),
+                    const SizedBox(width: 18),
+                    SizedBox(width: 420, child: right),
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    left,
+                    const SizedBox(height: 18),
+                    right,
+                  ],
+                ),
+              const SizedBox(height: 24),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _kpiCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required String sub,
+    Color? valueColor,
+  }) {
+    return AppCard(
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: _accent.withValues(alpha: 0.12),
+              border: Border.all(color: _accent.withValues(alpha: 0.25)),
+            ),
+            child: Icon(icon, color: _accent),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: valueColor)),
+                Text(sub, style: const TextStyle(fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -213,350 +337,127 @@ class _StatistikSeiteState extends State<StatistikSeite> {
     );
   }
 
-  double _aktuellerUmsatz() {
-    switch (_zeitraum) {
-      case Zeitraum.woche:
-        return _umsatzWoche.fold(0, (a, b) => a + b);
-      case Zeitraum.monat:
-        // hier: Summe der 12 Monatswerte
-        return _umsatzMonat.fold(0, (a, b) => a + b);
-      case Zeitraum.jahr:
-        // hier: letzter Jahreswert
-        return _umsatzJahr.isNotEmpty ? _umsatzJahr.last : 0;
-    }
-  }
-
-  List<double> _chartValues() {
-    switch (_zeitraum) {
-      case Zeitraum.woche:
-        return _umsatzWoche;
-      case Zeitraum.monat:
-        return _umsatzMonat;
-      case Zeitraum.jahr:
-        return _umsatzJahr;
-    }
-  }
-
-  int _labelCount() {
-    switch (_zeitraum) {
-      case Zeitraum.woche:
-        return 7;
-      case Zeitraum.monat:
-        return 12;
-      case Zeitraum.jahr:
-        return 5;
-    }
-  }
-
-  String _formatEuro(double v) {
-    // Simple: später Intl
-    final rounded = v.round();
-    final s = rounded.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      final idxFromEnd = s.length - i;
-      buf.write(s[i]);
-      if (idxFromEnd > 1 && idxFromEnd % 3 == 1) buf.write('.');
-    }
-    return "${buf.toString()} €";
-  }
-}
-
-class _ZeitraumSwitch extends StatelessWidget {
-  final Zeitraum value;
-  final ValueChanged<Zeitraum> onChanged;
-
-  const _ZeitraumSwitch({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return SegmentedButton<Zeitraum>(
-      segments: const [
-        ButtonSegment(value: Zeitraum.woche, label: Text("Woche")),
-        ButtonSegment(value: Zeitraum.monat, label: Text("Monat")),
-        ButtonSegment(value: Zeitraum.jahr, label: Text("Jahr")),
-      ],
-      selected: {value},
-      onSelectionChanged: (set) => onChanged(set.first),
-    );
-  }
-}
-
-class _Panel extends StatelessWidget {
-  final Color bg;
-  final Color border;
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  const _Panel({
-    required this.bg,
-    required this.border,
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadii.r22),
-      child: Container(
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: border),
-          borderRadius: BorderRadius.circular(AppRadii.r22),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 4),
-                        Text(subtitle, style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Colors.black54)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(child: child),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _KpiCard extends StatelessWidget {
-  final Color bg;
-  final Color border;
-  final String title;
-  final String value;
-  final String subtitle;
-  final IconData icon;
-  final Color valueColor;
-  final Color textMain;
-  final Color textSub;
-
-  const _KpiCard({
-    required this.bg,
-    required this.border,
-    required this.title,
-    required this.value,
-    required this.subtitle,
-    required this.icon,
-    required this.valueColor,
-    required this.textMain,
-    required this.textSub,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadii.r22),
-      child: Container(
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: border),
-          borderRadius: BorderRadius.circular(AppRadii.r22),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: AppColors.orangeSoft,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: AppColors.orange),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(color: textSub, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 6),
-                  Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: valueColor)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(color: textSub)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BarChart extends StatelessWidget {
-  final List<double> values;
-  final int labelCount;
-  final Color barColor;
-  final Color textColor;
-  final Color axisColor;
-
-  const _BarChart({
-    required this.values,
-    required this.labelCount,
-    required this.barColor,
-    required this.textColor,
-    required this.axisColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final maxV = values.isEmpty ? 1.0 : values.reduce((a, b) => a > b ? a : b);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget _serviceRow(String name, double pct) {
+    return Row(
       children: [
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              for (final v in values)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Container(
-                      height: (v / maxV) * 220,
-                      decoration: BoxDecoration(
-                        color: barColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800)),
         ),
-        const SizedBox(height: 12),
-        Container(height: 1, color: axisColor),
-        const SizedBox(height: 10),
-        Text(
-          "Skala: 0 – ${maxV.round()}",
-          style: TextStyle(color: textColor, fontWeight: FontWeight.w700),
-        ),
-      ],
-    );
-  }
-}
-
-class _ServiceRow extends StatelessWidget {
-  final String label;
-  final double value;
-  final Color textMain;
-  final Color textSub;
-
-  const _ServiceRow({
-    required this.label,
-    required this.value,
-    required this.textMain,
-    required this.textSub,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = (value * 100).round();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(label, style: TextStyle(color: textMain, fontWeight: FontWeight.w800)),
+        SizedBox(
+          width: 180,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 10,
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              valueColor: AlwaysStoppedAnimation(_accent.withValues(alpha: 0.85)),
             ),
-            Text("$pct%", style: TextStyle(color: textSub, fontWeight: FontWeight.w800)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: value,
-            minHeight: 10,
-            backgroundColor: const Color.fromARGB(25, 0, 0, 0),
-            color: AppColors.orange,
           ),
         ),
+        const SizedBox(width: 12),
+        Text('${(pct * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w900)),
       ],
     );
   }
-}
 
-class _TeamTile extends StatelessWidget {
-  final _MitarbeiterStat stat;
-  final Color textMain;
-  final Color textSub;
-
-  const _TeamTile({
-    required this.stat,
-    required this.textMain,
-    required this.textSub,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = (stat.auslastung * 100).round();
-
+  Widget _staffTile(String name, String left, String right) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12),
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: AppColors.orangeSoft,
-            child: const Icon(Icons.person, color: AppColors.orange),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: _accent.withValues(alpha: 0.12),
+              border: Border.all(color: _accent.withValues(alpha: 0.25)),
+            ),
+            child: Icon(Icons.person, color: _accent.withValues(alpha: 0.85)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(stat.name, style: TextStyle(color: textMain, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text("${stat.termine} Termine • $pct% Auslastung", style: TextStyle(color: textSub, fontWeight: FontWeight.w700)),
+                Text(name, style: const TextStyle(fontWeight: FontWeight.w900)),
+                Text(left, style: const TextStyle(fontWeight: FontWeight.w600)),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(20, 0, 0, 0),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              "No-Shows: ${stat.noShows}",
-              style: TextStyle(color: textSub, fontWeight: FontWeight.w800),
-            ),
-          ),
+          Text(right, style: const TextStyle(fontWeight: FontWeight.w800)),
         ],
       ),
     );
   }
+
+  // ---- MOCKS (später ersetzt du das easy mit echten Daten) ----
+
+  _Kpis _mockKpis(StatsRange r) {
+    switch (r) {
+      case StatsRange.week:
+        return const _Kpis(termine: 178, auslastung: 78, noShows: 11, umsatz: 5770);
+      case StatsRange.month:
+        return const _Kpis(termine: 712, auslastung: 74, noShows: 41, umsatz: 22140);
+      case StatsRange.year:
+        return const _Kpis(termine: 8420, auslastung: 71, noShows: 390, umsatz: 268400);
+    }
+  }
+
+  List<double> _mockRevenueByDay(StatsRange r) {
+    // sieht so aus wie in deinem Original-Screen
+    if (r == StatsRange.week) return [820, 760, 900, 520, 1120, 980, 670];
+    if (r == StatsRange.month) return [3100, 2800, 3600, 2400, 4200, 3900, 3140];
+    return [12000, 9800, 14500, 11000, 16800, 15200, 12500];
+  }
+
+  List<int> _mockIdleByDay(StatsRange r) {
+    // Minuten (Leerlauf) – bewusst “realistisch”: Montag/Mittwoch besser, Do/SO mehr Leerlauf
+    if (r == StatsRange.week) return [120, 160, 90, 210, 80, 110, 240];
+    if (r == StatsRange.month) return [520, 640, 430, 780, 410, 560, 900];
+    return [6200, 7100, 5400, 8200, 5100, 6900, 9400];
+  }
+
+  String _rangeLabel(StatsRange r) {
+    switch (r) {
+      case StatsRange.week:
+        return 'letzte 7 Tage';
+      case StatsRange.month:
+        return 'letzte 30 Tage';
+      case StatsRange.year:
+        return 'dieses Jahr';
+    }
+  }
+
+  String _eur(num n) {
+    final s = n.toStringAsFixed(0);
+    final withDots = s.replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
+    return '$withDots €';
+  }
+
+  String _hm(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return '${h}h ${m}m';
+  }
 }
 
-class _MitarbeiterStat {
-  final String name;
+class _Kpis {
   final int termine;
-  final double auslastung; // 0..1
+  final int auslastung;
   final int noShows;
+  final int umsatz;
 
-  const _MitarbeiterStat(this.name, this.termine, this.auslastung, this.noShows);
+  const _Kpis({
+    required this.termine,
+    required this.auslastung,
+    required this.noShows,
+    required this.umsatz,
+  });
 }

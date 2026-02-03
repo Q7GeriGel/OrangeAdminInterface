@@ -4,32 +4,11 @@
   "dashboard": "Dashboard",
   "customers": "Kunden",
   "employees": "Mitarbeiter",
-  "schedule": "Terminübersicht",
+  "schedule": "Termine",
   "statistics": "Statistik",
   "settings": "Einstellungen",
-
   "save": "Speichern",
-  "logout": "Abmelden",
+  "logout": "Logout",
   "language": "Sprache",
-  "darkMode": "Dunkelmodus",
-
-  "statsRange": "Zeitraum",
-  "range7": "Letzte 7 Tage",
-  "range30": "Letzte 30 Tage",
-
-  "kpiAppointmentsToday": "Termine heute",
-  "kpiAppointmentsRange": "Termine im Zeitraum",
-  "kpiRevenueRange": "Umsatz im Zeitraum",
-  "kpiUtilization": "Auslastung",
-  "kpiNoShowRate": "No-Show-Quote",
-  "kpiAvgDuration": "Ø Dauer",
-
-  "chartAppointmentsByDay": "Termine pro Tag",
-  "chartRevenueTrend": "Umsatztrend",
-  "chartStatusShare": "Statusverteilung",
-
-  "topServices": "Top Leistungen",
-  "service": "Leistung",
-  "count": "Anzahl",
-  "revenue": "Umsatz"
+  "darkMode": "Dark Mode"
 }
