@@ -6,6 +6,7 @@ import 'kunden.dart';
 import 'mitarbeiter.dart';
 import 'einstellung.dart';
 import 'termine_wochenansicht.dart';
+import 'statistik.dart';
 
 class Startseite extends StatefulWidget {
   final String benutzername;
@@ -17,7 +18,7 @@ class Startseite extends StatefulWidget {
 }
 
 class _StartseiteState extends State<Startseite> {
-  int ausgewaehlterIndex = 0; // 0 = Dashboard
+  int ausgewaehlterIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +30,26 @@ class _StartseiteState extends State<Startseite> {
             beimAuswaehlen: (index) => setState(() => ausgewaehlterIndex = index),
           ),
           Expanded(
-            child: _seiteFuerIndex(ausgewaehlterIndex),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (child, anim) {
+                final slide = Tween<Offset>(
+                  begin: const Offset(0.02, 0),
+                  end: Offset.zero,
+                ).animate(anim);
+
+                return FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(position: slide, child: child),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey(ausgewaehlterIndex),
+                child: _seiteFuerIndex(ausgewaehlterIndex),
+              ),
+            ),
           ),
         ],
       ),
@@ -43,13 +63,11 @@ class _StartseiteState extends State<Startseite> {
       case 1:
         return const KundenSeite();
       case 2:
-        return MitarbeiterSeite(
-          benutzernameFallback: widget.benutzername,
-        );
+        return MitarbeiterSeite(benutzername: widget.benutzername);
       case 3:
         return const TermineWochenansicht();
       case 4:
-        return const Center(child: Text("Statistik"));
+        return const StatistikSeite();
       case 5:
         return const EinstellungSeite();
       default:

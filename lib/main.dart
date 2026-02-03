@@ -1,72 +1,100 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import 'controllers/anmeldung_controller.dart';
-import 'controllers/notizen_controller.dart';
-import 'controllers/terminplan_controller.dart';
-import 'controllers/kunden_verwaltung.dart';
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
-import 'repositories/terminquelle.dart';
-import 'repositories/mock_terminquelle.dart';
-import 'services/terminplan_service.dart';
-
+import 'widgets/theme/app_theme.dart';
 import 'seiten/auth_gate.dart';
 
-Future<void> main() async {
+// Controller / Service / Repo
+import 'controllers/app_settings_controller.dart';
+import 'controllers/terminplan_controller.dart';
+import 'services/terminplan_service.dart';
+import 'repositories/terminplan_repository.dart';
+
+// ✅ WICHTIG: Terminquelle-Typ kommt von hier
+import 'repositories/terminquelle.dart';
+import 'models/termin.dart';
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  Intl.defaultLocale = 'de_DE';
-  await initializeDateFormatting('de_DE', null);
-  await initializeDateFormatting('tr_TR', null);
-
-  runApp(const MyApp());
+  runApp(const FriseurOrangeApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// ✅ Simple Mock-Datenquelle (RAM) – ersetzt später DB/REST/Prefs
+class InMemoryTerminquelle implements Terminquelle {
+  final Map<String, List<Termin>> _store = {};
+
+  String _key(DateTime monday) => '${monday.year}-${monday.month}-${monday.day}';
+
+  @override
+  Future<List<Termin>> ladeWoche(DateTime monday) async {
+    // mutable copy zurückgeben (weil Service list.add / sort macht)
+    return List<Termin>.from(_store[_key(monday)] ?? const []);
+  }
+
+  @override
+  Future<void> speichereWoche(DateTime monday, List<Termin> termine) async {
+    // copy speichern
+    _store[_key(monday)] = List<Termin>.from(termine);
+  }
+}
+
+class FriseurOrangeApp extends StatelessWidget {
+  const FriseurOrangeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Termine
-        Provider<Terminquelle>(create: (_) => MockTerminquelle()),
+        // ✅ Settings global
+        ChangeNotifierProvider<AppSettingsController>(
+          create: (_) => AppSettingsController(),
+        ),
+
+        // ✅ Terminquelle (Mock)
+        Provider<Terminquelle>(
+          create: (_) => InMemoryTerminquelle(),
+        ),
+
+        // ✅ Service bekommt Terminquelle
         Provider<TerminplanService>(
-          create: (ctx) => TerminplanService(quelle: ctx.read<Terminquelle>()),
+          create: (ctx) => TerminplanService(
+            quelle: ctx.read<Terminquelle>(),
+          ),
         ),
+
+        // ✅ Repo (falls irgendwo im UI direkt benutzt)
+        Provider<TerminplanRepository>(
+          create: (ctx) => TerminplanRepository(
+            ctx.read<TerminplanService>(),
+          ),
+        ),
+
+        // ✅ Controller braucht 1 positional Argument (Service)
         ChangeNotifierProvider<TerminplanController>(
-          create: (ctx) => TerminplanController(ctx.read<TerminplanService>()),
+          create: (ctx) => TerminplanController(
+            ctx.read<TerminplanService>(),
+          ),
         ),
-
-        // Kunden ✅ jetzt global
-        ChangeNotifierProvider<KundenVerwaltung>(
-          create: (_) => KundenVerwaltung(),
-        ),
-
-        // Auth/Notizen
-        ChangeNotifierProvider(create: (_) => AnmeldungController()),
-        ChangeNotifierProvider(create: (_) => NotizenController()),
       ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        locale: const Locale('de', 'DE'),
-        supportedLocales: const [
-          Locale('de', 'DE'),
-          Locale('tr', 'TR'),
-        ],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: const Color(0xFFCC5C4C),
-        ),
-        home: const AuthGate(),
+      child: Consumer<AppSettingsController>(
+        builder: (context, settings, _) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: settings.themeMode,
+            locale: settings.locale,
+
+            // ✅ L10n
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+
+            home: const AuthGate(),
+          );
+        },
       ),
     );
   }

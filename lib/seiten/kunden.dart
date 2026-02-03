@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
 import '../widgets/kunden_tabelle.dart';
@@ -15,100 +13,118 @@ class KundenSeite extends StatefulWidget {
 }
 
 class _KundenSeiteState extends State<KundenSeite> {
+  final verwaltung = KundenVerwaltung();
   final sucheCtrl = TextEditingController();
   final datumFmt = DateFormat('dd.MM.yyyy');
 
-  // Einheitliche Höhe für Suche/Filter/Neuer-Kunde
   static const double topHeight = 44;
 
   @override
   void initState() {
     super.initState();
-
-    // ✅ Suche -> direkt in Provider schreiben (kein setState nötig)
     sucheCtrl.addListener(() {
-      final verwaltung = context.read<KundenVerwaltung>();
       verwaltung.sucheSetzen(sucheCtrl.text);
+      setState(() {});
     });
   }
 
   @override
   void dispose() {
     sucheCtrl.dispose();
+    verwaltung.dispose();
     super.dispose();
   }
 
   Future<void> _filterDialog() async {
-    final verwaltung = context.read<KundenVerwaltung>();
-
     bool? nurStamm = verwaltung.nurStammkunden;
     String? friseur = verwaltung.friseur;
 
     await showDialog(
       context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Filter'),
-        content: SizedBox(
-          width: 420,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(children: [
-                const Text('Stammkunde:'),
-                const SizedBox(width: 12),
-                DropdownButton<bool?>(
-                  value: nurStamm,
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('Egal')),
-                    DropdownMenuItem(value: true, child: Text('Nur Stammkunden')),
-                    DropdownMenuItem(value: false, child: Text('Nur Nicht-Stammkunden')),
+      builder: (c) {
+        return StatefulBuilder(
+          builder: (context, setLocalState) {
+            return AlertDialog(
+              title: const Text('Filter'),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(children: [
+                      const SizedBox(width: 90, child: Text('Stammkunde:')),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButton<bool?>(
+                          value: nurStamm,
+                          isExpanded: true,
+                          items: const [
+                            DropdownMenuItem(value: null, child: Text('Egal')),
+                            DropdownMenuItem(value: true, child: Text('Nur Stammkunden')),
+                            DropdownMenuItem(value: false, child: Text('Nur Nicht-Stammkunden')),
+                          ],
+                          onChanged: (v) => setLocalState(() => nurStamm = v),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      const SizedBox(width: 90, child: Text('Friseur:')),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButton<String?>(
+                          value: friseur,
+                          isExpanded: true,
+                          items: [
+                            const DropdownMenuItem(value: null, child: Text('Egal')),
+                            ...verwaltung.friseure.map(
+                              (s) => DropdownMenuItem(value: s, child: Text(s)),
+                            ),
+                          ],
+                          onChanged: (v) => setLocalState(() => friseur = v),
+                        ),
+                      ),
+                    ]),
                   ],
-                  onChanged: (v) => nurStamm = v,
                 ),
-              ]),
-              const SizedBox(height: 12),
-              Row(children: [
-                const Text('Friseur:'),
-                const SizedBox(width: 12),
-                DropdownButton<String?>(
-                  value: friseur,
-                  hint: const Text('Egal'),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('Egal')),
-                    ...verwaltung.friseure.map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                  ],
-                  onChanged: (v) => friseur = v,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Abbrechen'),
                 ),
-              ]),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
-          FilledButton(
-            onPressed: () {
-              verwaltung.filterSetzen(nurStammkunden: nurStamm, friseur: friseur);
-              Navigator.pop(context);
-            },
-            child: const Text('Übernehmen'),
-          ),
-        ],
-      ),
+                TextButton(
+                  onPressed: () {
+                    // ✅ schneller Reset
+                    setLocalState(() {
+                      nurStamm = null;
+                      friseur = null;
+                    });
+                  },
+                  child: const Text('Zurücksetzen'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    verwaltung.filterSetzen(nurStammkunden: nurStamm, friseur: friseur);
+                    Navigator.pop(context);
+                    setState(() {});
+                  },
+                  child: const Text('Übernehmen'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   Future<void> _dialogHinzufuegenBearbeiten({Kunde? bearbeiten}) async {
-    final verwaltung = context.read<KundenVerwaltung>();
-
     final result = await showDialog<Kunde>(
       context: context,
       barrierDismissible: false,
-      builder: (c) => KundeDialog(
-        initial: bearbeiten,
-        friseure: verwaltung.friseure,
-      ),
+      builder: (c) => KundeDialog(initial: bearbeiten, friseure: verwaltung.friseure),
     );
-
     if (result == null) return;
 
     if (bearbeiten == null) {
@@ -116,11 +132,10 @@ class _KundenSeiteState extends State<KundenSeite> {
     } else {
       verwaltung.bearbeiten(result);
     }
+    setState(() {});
   }
 
   Future<void> _naechstenTerminWaehlen(Kunde k) async {
-    final verwaltung = context.read<KundenVerwaltung>();
-
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -128,143 +143,178 @@ class _KundenSeiteState extends State<KundenSeite> {
       firstDate: DateTime(now.year - 2),
       lastDate: DateTime(now.year + 3),
     );
+    if (picked != null) {
+      final u = k.kopie()..naechsterTermin = picked;
+      verwaltung.bearbeiten(u);
+      setState(() {});
+    }
+  }
 
-    if (picked == null) return;
+  String? _activeFilterText() {
+    final parts = <String>[];
 
-    // ✅ ohne k.kopie() (damit’s überall safe ist)
-    final updated = Kunde(
-      id: k.id,
-      name: k.name,
-      telefonnummer: k.telefonnummer,
-      stammkunde: k.stammkunde,
-      bevorzugterFriseur: k.bevorzugterFriseur,
-      letzterHaarschnitt: k.letzterHaarschnitt,
-      naechsterTermin: picked,
-    );
+    final stamm = verwaltung.nurStammkunden;
+    if (stamm == true) parts.add('Nur Stammkunden');
+    if (stamm == false) parts.add('Nur Nicht-Stammkunden');
 
-    verwaltung.bearbeiten(updated);
+    final fr = verwaltung.friseur;
+    if (fr != null && fr.trim().isNotEmpty) parts.add('Friseur: $fr');
+
+    if (parts.isEmpty) return null;
+    return parts.join(' • ');
   }
 
   @override
   Widget build(BuildContext context) {
-    final verwaltung = context.watch<KundenVerwaltung>();
-
     const pageBg = Color(0xFFECEDEE);
     const panelBlau = Color(0xFF355573);
     const weiss = Colors.white;
 
+    final activeFilters = _activeFilterText();
+
     return Container(
       color: pageBg,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       child: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 1120),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 18),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: panelBlau,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 18, 24, 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Topzeile
-                  Row(
-                    children: [
-                      // Suche
-                      Expanded(
-                        child: Container(
-                          height: topHeight,
-                          decoration: BoxDecoration(
-                            color: weiss,
-                            borderRadius: BorderRadius.circular(topHeight / 2),
-                          ),
-                          child: Row(
-                            children: [
-                              const SizedBox(width: 12),
-                              const Icon(Icons.search, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  controller: sucheCtrl,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Suche bei Name, Telefonnummer oder Datum des letzten Haarschnittes',
-                                    border: InputBorder.none,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Kunden',
+                style: TextStyle(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 12),
 
-                      // Filter
-                      SizedBox(
-                        width: topHeight,
-                        height: topHeight,
-                        child: ClipOval(
-                          child: Material(
-                            color: weiss.withAlpha(50),
-                            child: IconButton(
-                              tooltip: 'Filter',
-                              onPressed: _filterDialog,
-                              icon: const Icon(Icons.tune, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Neuer Kunde
-                      TextButton.icon(
-                        onPressed: () => _dialogHinzufuegenBearbeiten(),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          backgroundColor: const Color(0xFF6E61A8),
-                          minimumSize: const Size(0, topHeight),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          shape: const StadiumBorder(),
-                        ),
-                        icon: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: const BoxDecoration(
-                            color: Colors.white24,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.add, size: 16, color: Colors.white),
-                        ),
-                        label: const Text('Neuer Kunde'),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: panelBlau,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha(10),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: topHeight,
+                                decoration: BoxDecoration(
+                                  color: weiss,
+                                  borderRadius: BorderRadius.circular(topHeight / 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(14),
+                                      blurRadius: 18,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(width: 14),
+                                    const Icon(Icons.search, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: sucheCtrl,
+                                        decoration: const InputDecoration(
+                                          hintText:
+                                              'Suche bei Name, Telefonnummer oder Datum (dd.MM.yyyy)',
+                                          border: InputBorder.none,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
 
-                  // Tabelle
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: weiss,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: KundenTabelle(
-                          kunden: verwaltung.kunden,
-                          datumFmt: datumFmt,
-                          onBearbeiten: (k) => _dialogHinzufuegenBearbeiten(bearbeiten: k),
-                          onLoeschen: (k) => context.read<KundenVerwaltung>().loeschen(k.id),
-                          onTermin: _naechstenTerminWaehlen,
-                          minLinien: 14,
+                            SizedBox(
+                              width: topHeight,
+                              height: topHeight,
+                              child: ClipOval(
+                                child: Material(
+                                  color: Colors.white.withAlpha(35),
+                                  child: IconButton(
+                                    tooltip: 'Filter',
+                                    onPressed: _filterDialog,
+                                    icon: const Icon(Icons.tune, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(width: 12),
+
+                            FilledButton.icon(
+                              onPressed: () => _dialogHinzufuegenBearbeiten(),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF6E61A8),
+                                minimumSize: const Size(0, topHeight),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                shape: const StadiumBorder(),
+                              ),
+                              icon: const Icon(Icons.person_add),
+                              label: const Text('Neuer Kunde'),
+                            ),
+                          ],
                         ),
-                      ),
+
+                        if (activeFilters != null) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            'Filter aktiv: $activeFilters',
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(220),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 12),
+                        ],
+
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: weiss,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18),
+                              child: KundenTabelle(
+                                kunden: verwaltung.kunden,
+                                datumFmt: datumFmt,
+                                onBearbeiten: (k) => _dialogHinzufuegenBearbeiten(bearbeiten: k),
+                                onLoeschen: (k) => setState(() => verwaltung.loeschen(k.id)),
+                                onTermin: _naechstenTerminWaehlen,
+                                minLinien: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

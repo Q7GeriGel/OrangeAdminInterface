@@ -9,7 +9,6 @@ import '../models/kunde.dart';
 import '../dashboard/box_bevorstehende_kunden.dart';
 import '../dashboard/box_aktuelle_aenderung.dart';
 import '../dashboard/box_freie_zeitfenster.dart';
-import '../dashboard/box_shared.dart';
 
 import '../widgets/kalender/termin_create_dialog.dart';
 import '../widgets/kunde_dialog.dart';
@@ -27,7 +26,8 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ctrl = context.watch<TerminplanController>();
-    final todayText = DateFormat('EEEE, dd.MM.yyyy', 'de_DE').format(DateTime.now());
+    final todayText =
+        DateFormat('EEEE, dd.MM.yyyy', 'de_DE').format(DateTime.now());
 
     final messenger = ScaffoldMessenger.of(context);
 
@@ -37,13 +37,18 @@ class DashboardPage extends StatelessWidget {
       final res = await showDialog<Kunde>(
         context: context,
         barrierDismissible: false,
-        builder: (c) => KundeDialog(initial: null, friseure: verwaltung.friseure),
+        builder: (c) => KundeDialog(
+          initial: null,
+          friseure: verwaltung.friseure,
+        ),
       );
 
       if (res == null) return;
 
       verwaltung.hinzufuegen(res);
-      messenger.showSnackBar(SnackBar(content: Text('Kunde erstellt: ${res.name}')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Kunde erstellt: ${res.name}')),
+      );
     }
 
     return Scaffold(
@@ -57,17 +62,22 @@ class DashboardPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ----------------
+                  // Header / Actions
+                  // ----------------
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: _WelcomeHeader(benutzername: benutzername)),
                       const SizedBox(width: 12),
-
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(999),
@@ -85,19 +95,24 @@ class DashboardPage extends StatelessWidget {
                               children: [
                                 Icon(Icons.today, size: 18, color: _orange),
                                 const SizedBox(width: 8),
-                                Text(todayText, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                Text(
+                                  todayText,
+                                  style: const TextStyle(fontWeight: FontWeight.w800),
+                                ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 10),
-
                           Wrap(
                             spacing: 10,
                             runSpacing: 10,
                             alignment: WrapAlignment.end,
                             children: [
                               OutlinedButton.icon(
-                                onPressed: () => openCreateTerminFlow(context: context, ctrl: ctrl),
+                                onPressed: () => openCreateTerminFlow(
+                                  context: context,
+                                  ctrl: ctrl,
+                                ),
                                 icon: const Icon(Icons.add),
                                 label: const Text('Neuer Termin'),
                               ),
@@ -110,7 +125,9 @@ class DashboardPage extends StatelessWidget {
                                 tooltip: 'Heute aktualisieren',
                                 onPressed: () {
                                   ctrl.goToday();
-                                  messenger.showSnackBar(const SnackBar(content: Text('Aktualisiert ✅')));
+                                  messenger.showSnackBar(
+                                    const SnackBar(content: Text('Aktualisiert ✅')),
+                                  );
                                 },
                                 icon: const Icon(Icons.refresh),
                               ),
@@ -132,81 +149,104 @@ class DashboardPage extends StatelessWidget {
 
                   const SizedBox(height: 14),
 
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _KpiCard(
-                        icon: Icons.event_available,
-                        label: 'Termine heute',
-                        value: ctrl.termineHeuteTotal().toString(),
-                        accent: _orange,
-                      ),
-                      _KpiCard(
-                        icon: Icons.schedule,
-                        label: 'Nächster Termin',
-                        value: ctrl.naechsterTerminHeuteLabel(),
-                        accent: _blue,
-                      ),
-                      _KpiCard(
-                        icon: Icons.timer,
-                        label: 'Freie Slots',
-                        value: ctrl.freie.length.toString(),
-                        accent: _violet,
-                      ),
-                      _KpiCard(
-                        icon: Icons.sync,
-                        label: 'Änderungen',
-                        value: ctrl.aenderungen.length.toString(),
-                        accent: const Color(0xFF2E7DDB),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 18),
-
+                  // ----------------
+                  // KPI GRID (stabil, sauber)
+                  // ----------------
                   LayoutBuilder(
                     builder: (context, c) {
-                      final isNarrow = c.maxWidth < 900;
+                      final w = c.maxWidth;
+                      const gap = 12.0;
 
-                      if (isNarrow) {
-                        return Column(
-                          children: const [
-                            BevorstehendeKundenBox(),
-                            SizedBox(height: 18),
-                            AktuelleAenderungenBox(),
-                          ],
-                        );
+                      int cols;
+                      if (w >= 980) {
+                        cols = 4;
+                      } else if (w >= 560) {
+                        cols = 2;
+                      } else {
+                        cols = 1;
                       }
 
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Expanded(child: BevorstehendeKundenBox()),
-                          SizedBox(width: 22),
-                          Expanded(child: AktuelleAenderungenBox()),
+                      final itemWidth = (w - gap * (cols - 1)) / cols;
+
+                      return Wrap(
+                        spacing: gap,
+                        runSpacing: gap,
+                        children: [
+                          SizedBox(
+                            width: itemWidth,
+                            child: _KpiCard(
+                              icon: Icons.event_available,
+                              label: 'Termine heute',
+                              value: ctrl.termineHeuteTotal().toString(),
+                              accent: _orange,
+                            ),
+                          ),
+                          SizedBox(
+                            width: itemWidth,
+                            child: _KpiCard(
+                              icon: Icons.schedule,
+                              label: 'Nächster Termin',
+                              value: ctrl.naechsterTerminHeuteLabel(),
+                              accent: _blue,
+                            ),
+                          ),
+                          SizedBox(
+                            width: itemWidth,
+                            child: _KpiCard(
+                              icon: Icons.timer,
+                              label: 'Freie Slots',
+                              value: ctrl.freie.length.toString(),
+                              accent: _violet,
+                            ),
+                          ),
+                          SizedBox(
+                            width: itemWidth,
+                            child: _KpiCard(
+                              icon: Icons.sync,
+                              label: 'Änderungen',
+                              value: ctrl.aenderungen.length.toString(),
+                              accent: const Color(0xFF2E7DDB),
+                            ),
+                          ),
                         ],
                       );
                     },
                   ),
 
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 18),
 
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: const BoxFreieZeitfenster(),
-                    ),
+                  // ----------------
+                  // DASHBOARD BOX GRID (3 Panels, exakt gleiche Breiten)
+                  // ----------------
+                  LayoutBuilder(
+                    builder: (context, c) {
+                      final w = c.maxWidth;
+                      const gap = 18.0;
+
+                      int cols;
+                      if (w >= 1100) {
+                        cols = 3;
+                      } else if (w >= 780) {
+                        cols = 2;
+                      } else {
+                        cols = 1;
+                      }
+
+                      final itemWidth = (w - gap * (cols - 1)) / cols;
+
+                      return Wrap(
+                        spacing: gap,
+                        runSpacing: gap,
+                        children: [
+                          SizedBox(width: itemWidth, child: const BevorstehendeKundenBox()),
+                          SizedBox(width: itemWidth, child: const AktuelleAenderungenBox()),
+                          SizedBox(width: itemWidth, child: const BoxFreieZeitfenster()),
+                        ],
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 22),
-
-                  Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      child: const BoxShared(),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -263,12 +303,12 @@ class _KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 280,
+      height: 86, // ✅ gleiche Höhe = geordnet
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withAlpha(18)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE9E9E9)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(10),
@@ -280,21 +320,30 @@ class _KpiCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 42,
-            height: 42,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: accent.withAlpha(26),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: accent),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(color: Colors.black.withAlpha(160))),
-                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.black.withAlpha(150),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
                 Text(
                   value,
                   maxLines: 1,

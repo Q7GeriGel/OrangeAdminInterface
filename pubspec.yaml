@@ -1,24 +1,24 @@
 name: friseur_orange_web
-description: "A new Flutter project."
-publish_to: 'none'
-
+description: "Friseur Orange - internes Admin Interface (Web)"
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # ✅ Für DateFormat + deutsche Locale (intl)
   flutter_localizations:
     sdk: flutter
-  intl: 0.20.2
 
+  intl: any
   provider: ^6.1.2
-  shared_preferences: ^2.3.2
-  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.2.3
+
+  # Charts (Statistik)
+  fl_chart: ^1.1.1
 
 dev_dependencies:
   flutter_test:
@@ -27,7 +27,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
 
-  # ✅ Logo Asset (weil du's in Sidebar lädst)
   assets:
-    - assets/logo.jpg
+    - assets/

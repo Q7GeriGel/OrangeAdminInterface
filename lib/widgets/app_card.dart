@@ -1,79 +1,67 @@
 import 'package:flutter/material.dart';
+import 'theme/app_tokens.dart';
 
 class AppCard extends StatelessWidget {
+  // ✅ optional, damit alte Aufrufe ohne title weiter funktionieren
+  final String? title;
+  final IconData? icon;
+  final Widget? trailing;
+
+  final Widget child;
+  final EdgeInsets padding;
+
   const AppCard({
     super.key,
-    required this.title,
-    required this.icon,
+    this.title,
+    this.icon,
+    this.trailing,
     required this.child,
-    this.width,
+    this.padding = const EdgeInsets.all(16),
   });
-
-  final String title;
-  final IconData icon;
-  final Widget child;
-  final double? width;
-
-  static const _orange = Color(0xFFCC5C4C);
-  static const _blue = Color(0xFF335776);
 
   @override
   Widget build(BuildContext context) {
-    final card = Container(
+    final colors = AppColors.of(context);
+
+    return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.r18),
+        boxShadow: AppShadows.card,
         border: Border.all(
-          color: _blue.withValues(alpha: 0.14),
-          width: 1,
+          color: colors.isDark
+              ? colors.scheme.outlineVariant.withValues(alpha: 0.35)
+              : colors.scheme.outlineVariant.withValues(alpha: 0.6),
         ),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-            color: Colors.black.withValues(alpha: 0.06),
-          ),
-        ],
       ),
+      padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ Header wieder "richtig" Orange
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: const BoxDecoration(
-              color: _orange,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
-            ),
-            child: Row(
+          if (title != null) ...[
+            Row(
               children: [
-                Icon(icon, size: 18, color: Colors.white),
-                const SizedBox(width: 10),
+                if (icon != null) ...[
+                  Icon(icon, color: AppColors.orange),
+                  const SizedBox(width: AppGaps.s12),
+                ],
                 Expanded(
                   child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    title!,
                     style: const TextStyle(
+                      fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: Colors.white,
                     ),
                   ),
                 ),
+                if (trailing != null) trailing!,
               ],
             ),
-          ),
-
-          // Body
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: child,
-          ),
+            const SizedBox(height: AppGaps.s12),
+          ],
+          child,
         ],
       ),
     );
-
-    return width == null ? card : SizedBox(width: width, child: card);
   }
 }

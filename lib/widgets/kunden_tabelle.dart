@@ -1,20 +1,10 @@
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/kunde.dart';
 
-/// Tabelle ohne Render-Overflow:
-/// - Spalten nutzen FLEX anstatt fixer Pixelbreiten (passt sich der verfügbaren Breite an)
-/// - Einheitliche Höhen: Header und Zeilen
-/// - Icons kompakt und innerhalb fester Breite, damit nichts übersteht
-/// - Bei langen Texten: ellipsis
-class KundenTabelle extends StatelessWidget {
-  final List<Kunde> kunden;
-  final DateFormat datumFmt;
-  final void Function(Kunde) onBearbeiten;
-  final void Function(Kunde) onLoeschen;
-  final void Function(Kunde) onTermin;
-  final int minLinien;
-
+class KundenTabelle extends StatefulWidget {
   const KundenTabelle({
     super.key,
     required this.kunden,
@@ -25,249 +15,204 @@ class KundenTabelle extends StatelessWidget {
     this.minLinien = 12,
   });
 
-  static const double _rowHeight = 36;     // fixe Zeilenhöhe
-  static const double _headerHeight = 48;  // fixe Headerhöhe
+  final List<Kunde> kunden;
+  final DateFormat datumFmt;
 
-  String _fmt(DateTime? d) => d == null ? '' : datumFmt.format(d);
+  final void Function(Kunde) onBearbeiten;
+  final void Function(Kunde) onLoeschen;
+  final void Function(Kunde) onTermin;
+
+  final int minLinien;
+
+  @override
+  State<KundenTabelle> createState() => _KundenTabelleState();
+}
+
+class _KundenTabelleState extends State<KundenTabelle> {
+  final _vCtrl = ScrollController();
+  final _hCtrl = ScrollController();
+
+  @override
+  void dispose() {
+    _vCtrl.dispose();
+    _hCtrl.dispose();
+    super.dispose();
+  }
+
+  String _fmtDate(DateTime? d) => d == null ? '—' : widget.datumFmt.format(d);
 
   @override
   Widget build(BuildContext context) {
-    final bodyStyle = Theme.of(context).textTheme.bodyMedium!.copyWith(
-          color: Colors.black87,
-          height: 1.2,
-        );
+    const nameW = 220.0;
+    const telW = 220.0;
+    const stammW = 120.0;
+    const friseurW = 180.0;
+    const letzterW = 120.0;
+    const nextW = 140.0;
+    const actionsW = 120.0;
 
-    // Wieviele leere Linien für "Papierlinien"-Look?
-    final rows = kunden;
-    final filler = (minLinien - rows.length).clamp(0, 999);
+    const rowH = 56.0;
 
-    return Column(
-      children: [
-        // ---------- HEADER ----------
-        SizedBox(
-          height: _headerHeight,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: const [
-                _HeaderCell(text: 'Name', flex: 3),
-                _HeaderCell(text: 'Telefonnummer', flex: 3),
-                _HeaderCell(text: 'Stammkunde', flex: 2, center: true),
-                _HeaderCell(text: 'Bevorzugter Friseur', flex: 3),
-                _HeaderCell(text: 'Letzter', flex: 2),
-                _HeaderCell(text: 'Nächster Termin', flex: 3),
-                _HeaderCell(text: 'Aktionen', flex: 2, end: true),
-              ],
-            ),
-          ),
-        ),
-        const Divider(height: 1, thickness: 1, color: Color(0xFFE6E6E6)),
+    final headerStyle = TextStyle(
+      color: Colors.black.withAlpha(210),
+      fontWeight: FontWeight.w900,
+      fontSize: 13,
+    );
 
-        // ---------- ZEILEN ----------
-        Expanded(
-          child: ListView.builder(
-            itemCount: rows.length + filler,
-            itemBuilder: (context, i) {
-              if (i >= rows.length) {
-                // Leere Linie mit fixer Höhe
-                return const _EmptyLine(height: _rowHeight);
-              }
+    final cellStyle = TextStyle(
+      color: Colors.black.withAlpha(210),
+      fontWeight: FontWeight.w600,
+      fontSize: 14,
+    );
 
-              final k = rows[i];
-              return Column(
-                children: [
-                  SizedBox(
-                    height: _rowHeight,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Name
-                          Expanded(
-                            flex: 3,
-                            child: Text(
-                              k.name,
-                              style: bodyStyle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // Telefon
-                          Expanded(
-                            flex: 3,
-                            child: Text(
-                              k.telefonnummer,
-                              style: bodyStyle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // Stammkunde (zentriert)
-                          const SizedBox(width: 4),
-                          Expanded(
-                            flex: 2,
-                            child: Center(
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: Checkbox(
-                                  value: k.stammkunde,
-                                  onChanged: (_) {},
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
+    final subStyle = TextStyle(
+      color: Colors.black.withAlpha(150),
+      fontWeight: FontWeight.w600,
+      fontSize: 13,
+    );
+
+    final totalRows = math.max(widget.kunden.length, widget.minLinien);
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        final minTableWidth =
+            nameW + telW + stammW + friseurW + letzterW + nextW + actionsW;
+
+        final tableWidth = math.max(c.maxWidth, minTableWidth);
+
+        Widget headerCell(String text, double w, {Alignment a = Alignment.centerLeft}) {
+          return SizedBox(
+            width: w,
+            child: Align(alignment: a, child: Text(text, style: headerStyle)),
+          );
+        }
+
+        Widget dataCell(Widget child, double w, {Alignment a = Alignment.centerLeft}) {
+          return SizedBox(width: w, child: Align(alignment: a, child: child));
+        }
+
+        Widget rowLine() => Divider(height: 1, thickness: 1, color: Colors.black.withAlpha(14));
+
+        final bodyList = ListView.builder(
+          controller: _vCtrl,
+          itemCount: totalRows,
+          itemBuilder: (context, i) {
+            final bool hasData = i < widget.kunden.length;
+            final Kunde? k = hasData ? widget.kunden[i] : null;
+
+            return Column(
+              children: [
+                Container(
+                  height: rowH,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    children: [
+                      dataCell(Text(k?.name ?? '', style: cellStyle), nameW),
+                      dataCell(Text(k?.telefonnummer ?? '', style: cellStyle), telW),
+                      dataCell(
+                        k == null
+                            ? const SizedBox.shrink()
+                            : Icon(
+                                k.stammkunde ? Icons.check_box : Icons.check_box_outline_blank,
+                                size: 20,
+                                color: k.stammkunde
+                                    ? const Color(0xFF2E7D32)
+                                    : Colors.black.withAlpha(120),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          // Friseur
-                          Expanded(
-                            flex: 3,
-                            child: Text(
-                              k.bevorzugterFriseur,
-                              style: bodyStyle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // Letzter
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              _fmt(k.letzterHaarschnitt),
-                              style: bodyStyle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // Nächster
-                          Expanded(
-                            flex: 3,
-                            child: Text(
-                              _fmt(k.naechsterTermin),
-                              style: bodyStyle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // Aktionen (rechtsbündig, kompakt)
-                          Expanded(
-                            flex: 2,
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: SizedBox(
-                                width: 96, // genug Platz für 3 kompakte Buttons
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
+                        stammW,
+                        a: Alignment.center,
+                      ),
+                      dataCell(Text(k?.bevorzugterFriseur ?? '', style: subStyle), friseurW),
+                      dataCell(Text(k == null ? '' : _fmtDate(k.letzterHaarschnitt), style: subStyle), letzterW),
+                      dataCell(Text(k == null ? '' : _fmtDate(k.naechsterTermin), style: subStyle), nextW),
+
+                      SizedBox(
+                        width: actionsW,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: k == null
+                              ? const SizedBox.shrink()
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    _iconBtn(
-                                      icon: Icons.edit,
-                                      tip: 'Bearbeiten',
-                                      onTap: () => onBearbeiten(k),
+                                    IconButton(
+                                      tooltip: 'Bearbeiten',
+                                      onPressed: () => widget.onBearbeiten(k),
+                                      icon: const Icon(Icons.edit, size: 20),
                                     ),
-                                    _iconBtn(
-                                      icon: Icons.calendar_today,
-                                      tip: 'Termin',
-                                      onTap: () => onTermin(k),
-                                      size: 16,
+                                    IconButton(
+                                      tooltip: 'Termin setzen',
+                                      onPressed: () => widget.onTermin(k),
+                                      icon: const Icon(Icons.calendar_month, size: 20),
                                     ),
-                                    _iconBtn(
-                                      icon: Icons.delete,
-                                      tip: 'Löschen',
-                                      onTap: () => onLoeschen(k),
+                                    IconButton(
+                                      tooltip: 'Löschen',
+                                      onPressed: () => widget.onLoeschen(k),
+                                      icon: const Icon(Icons.delete, size: 20),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  const Divider(height: 1, thickness: 1, color: Color(0xFFEDEDED)),
-                ],
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  static Widget _iconBtn({
-    required IconData icon,
-    required String tip,
-    required VoidCallback onTap,
-    double size = 18,
-  }) {
-    return IconButton(
-      tooltip: tip,
-      onPressed: onTap,
-      icon: Icon(icon, size: size),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-      visualDensity: VisualDensity.compact,
-      splashRadius: 18,
-    );
-  }
-}
-
-/// Header-Zelle mit Flex, optional zentriert/rechtsbündig
-class _HeaderCell extends StatelessWidget {
-  final String text;
-  final int flex;
-  final bool center;
-  final bool end;
-
-  const _HeaderCell({
-    required this.text,
-    required this.flex,
-    this.center = false,
-    this.end = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodyMedium!.copyWith(
-          fontWeight: FontWeight.w600,
-          color: Colors.black.withValues(alpha: 0.08),
+                ),
+                rowLine(),
+              ],
+            );
+          },
         );
 
-    Alignment align = Alignment.centerLeft;
-    if (center) align = Alignment.center;
-    if (end) align = Alignment.centerRight;
+        final table = SizedBox(
+          width: tableWidth,
+          child: Column(
+            children: [
+              Container(
+                height: rowH,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF6F7F9),
+                  border: Border(bottom: BorderSide(color: Colors.black.withAlpha(16))),
+                ),
+                child: Row(
+                  children: [
+                    headerCell('Name', nameW),
+                    headerCell('Telefonnummer', telW),
+                    headerCell('Stammkunde', stammW, a: Alignment.center),
+                    headerCell('Bevorzugter Friseur', friseurW),
+                    headerCell('Letzter', letzterW),
+                    headerCell('Nächster Termin', nextW),
+                    headerCell('Aktionen', actionsW, a: Alignment.centerRight),
+                  ],
+                ),
+              ),
 
-    return Expanded(
-      flex: flex,
-      child: Align(
-        alignment: align,
-        child: Text(
-          text,
-          style: style,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-    );
-  }
-}
+              Expanded(
+                // ✅ WEB: keine Flutter-Scrollbar (Browser macht das schon) -> wirkt cleaner
+                child: kIsWeb
+                    ? bodyList
+                    : Scrollbar(
+                        controller: _vCtrl,
+                        thumbVisibility: true,
+                        child: bodyList,
+                      ),
+              ),
+            ],
+          ),
+        );
 
-/// Leere Linie in Tabellenhöhe für die "Papierlinien"-Optik
-class _EmptyLine extends StatelessWidget {
-  final double height;
-  const _EmptyLine({required this.height});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      child: const Align(
-        alignment: Alignment.bottomCenter,
-        child: Divider(height: 1, thickness: 1, color: Color(0xFFEDEDED)),
-      ),
+        // Horizontal scroll nur wenn nötig
+        return Scrollbar(
+          controller: _hCtrl,
+          thumbVisibility: tableWidth > c.maxWidth,
+          notificationPredicate: (n) => n.depth == 0,
+          child: SingleChildScrollView(
+            controller: _hCtrl,
+            scrollDirection: Axis.horizontal,
+            child: table,
+          ),
+        );
+      },
     );
   }
 }
