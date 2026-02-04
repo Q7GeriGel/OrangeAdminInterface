@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/sidebar.dart';
+import 'auth_gate.dart';
 import 'dashboard.dart';
 import 'kunden.dart';
 import 'mitarbeiter.dart';
@@ -10,8 +11,13 @@ import 'statistik.dart';
 
 class Startseite extends StatefulWidget {
   final String benutzername;
+  final bool isAdmin;
 
-  const Startseite({super.key, required this.benutzername});
+  const Startseite({
+    super.key,
+    required this.benutzername,
+    this.isAdmin = false,
+  });
 
   @override
   State<Startseite> createState() => _StartseiteState();
@@ -19,6 +25,13 @@ class Startseite extends StatefulWidget {
 
 class _StartseiteState extends State<Startseite> {
   int ausgewaehlterIndex = 0;
+
+  void _logout() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthGate()),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +41,7 @@ class _StartseiteState extends State<Startseite> {
           Sidebar(
             ausgewaehlterIndex: ausgewaehlterIndex,
             beimAuswaehlen: (index) => setState(() => ausgewaehlterIndex = index),
+            onLogout: _logout, // ✅ echter Logout
           ),
           Expanded(
             child: AnimatedSwitcher(
@@ -65,9 +79,12 @@ class _StartseiteState extends State<Startseite> {
       case 2:
         return MitarbeiterSeite(benutzername: widget.benutzername);
       case 3:
-        return const TermineWochenansicht();
+        return TermineWochenansicht(isAdmin: widget.isAdmin);
       case 4:
-        return const StatistikSeite();
+        return StatistikSeite(
+          angemeldeterName: widget.benutzername,
+          isAdmin: widget.isAdmin,
+        );
       case 5:
         return const EinstellungSeite();
       default:

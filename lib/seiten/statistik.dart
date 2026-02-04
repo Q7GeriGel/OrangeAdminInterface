@@ -1,463 +1,722 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'package:provider/provider.dart';
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
-import '../widgets/app_card.dart';
-import '../widgets/app_page.dart';
-import '../widgets/theme/app_tokens.dart';
-
-enum StatsRange { week, month, year }
+import '../controllers/terminplan_controller.dart';
+import '../models/termin.dart';
 
 class StatistikSeite extends StatefulWidget {
-  const StatistikSeite({super.key});
+  final String angemeldeterName;
+  final bool isAdmin;
+
+  const StatistikSeite({
+    super.key,
+    required this.angemeldeterName,
+    required this.isAdmin,
+  });
 
   @override
   State<StatistikSeite> createState() => _StatistikSeiteState();
 }
 
 class _StatistikSeiteState extends State<StatistikSeite> {
-  StatsRange _range = StatsRange.week;
+  bool _teamView = false; // ✅ Admin Toggle
 
-  // Accent (wie in deinen Screens)
-  static const _accent = Color(0xFFC95B4C);
+  static const _orange = Color(0xFFCC5C4C);
+  static const _blue = Color(0xFF2E7DDB);
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  bool _sameName(String a, String b) => a.trim().toLowerCase() == b.trim().toLowerCase();
+
+  double _mockPriceForMinutes(int minutes) {
+    if (minutes >= 120) return 45;
+    if (minutes >= 90) return 35;
+    if (minutes >= 60) return 25;
+    if (minutes >= 45) return 20;
+    return 15;
+  }
+
+  List<Termin> _scopeTermine(TerminplanController ctrl) {
+    if (widget.isAdmin && _teamView) return ctrl.termine;
+    return ctrl.termine.where((t) => _sameName(t.mitarbeiterName, widget.angemeldeterName)).toList();
+  }
+
+  List<FreiesZeitfenster> _calcFreeSlotsForDay(List<Termin> scope, DateTime day) {
+    const startHour = 8;
+    const endHour = 20;
+    const slotMinutes = 30;
+
+    final d0 = DateTime(day.year, day.month, day.day);
+    final dayStart = DateTime(d0.year, d0.month, d0.day, startHour, 0);
+    final dayEnd = DateTime(d0.year, d0.month, d0.day, endHour, 0);
+
+    bool overlaps(DateTime aStart, DateTime aEnd, DateTime bStart, DateTime bEnd) {
+      return aStart.isBefore(bEnd) && aEnd.isAfter(bStart);
+    }
+
+    final dayTermine = scope.where((t) => _sameDay(t.start, d0) && t.status != Termin.statusAbgesagt).toList();
+
+    final res = <FreiesZeitfenster>[];
+    DateTime slot = dayStart;
+
+    while (slot.isBefore(dayEnd)) {
+      final slotEnd = slot.add(const Duration(minutes: slotMinutes));
+      final busy = dayTermine.any((t) => overlaps(t.start, t.end, slot, slotEnd));
+      if (!busy) res.add(FreiesZeitfenster(slot, slotEnd));
+      slot = slotEnd;
+    }
+
+    return res;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AppPage(
-      title: 'Statistik',
-      actions: [
-        SegmentedButton<StatsRange>(
-          segments: const [
-            ButtonSegment(value: StatsRange.week, label: Text('Woche')),
-            ButtonSegment(value: StatsRange.month, label: Text('Monat')),
-            ButtonSegment(value: StatsRange.year, label: Text('Jahr')),
+    final l10n = AppLocalizations.of(context);
+    final ctrl = context.watch<TerminplanController>();
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final pageBg = isDark ? const Color(0xFF0B0E14) : const Color(0xFFF4F4F4);
+    final cardBg = isDark ? const Color(0xFF121826) : Colors.white;
+    final border = isDark ? Colors.white10 : Colors.black12;
+    final textMain = isDark ? Colors.white : Colors.black;
+    final textSub = isDark ? Colors.white70 : Colors.black54;
+
+    final scope = _scopeTermine(ctrl);
+
+    final monday = ctrl.currentWeekMonday;
+    final days = List.generate(6, (i) => DateTime(monday.year, monday.month, monday.day + i));
+
+    final List<double> revByDay = days.map((d) {
+      final list = scope.where((t) => _sameDay(t.start, d) && t.status != Termin.statusAbgesagt).toList();
+      return list.fold<double>(0, (sum, t) {
+        final m = t.end.difference(t.start).inMinutes;
+        return sum + (t.price ?? _mockPriceForMinutes(m));
+      });
+    }).toList();
+
+    final weekRevenue = revByDay.fold<double>(0, (a, b) => a + b);
+
+    final today = DateTime.now();
+    final todayList = scope.where((t) => _sameDay(t.start, today) && t.status != Termin.statusAbgesagt).toList();
+    final todayRevenue = todayList.fold<double>(0, (sum, t) {
+      final m = t.end.difference(t.start).inMinutes;
+      return sum + (t.price ?? _mockPriceForMinutes(m));
+    });
+
+    const totalSlots = 24; // 08:00–20:00 in 30min
+    final freieHeute = _calcFreeSlotsForDay(scope, today);
+    final freeSlots = freieHeute.length;
+    final busySlots = (totalSlots - freeSlots).clamp(0, totalSlots);
+    final idleMinutes = freeSlots * 30;
+    final occupancyPct = totalSlots == 0 ? 0 : ((busySlots / totalSlots) * 100).round();
+
+    Widget content(double maxW) {
+      final wide = maxW >= 1100;
+
+      final left = _LeftPanel(
+        isDark: isDark,
+        cardBg: cardBg,
+        border: border,
+        textMain: textMain,
+        textSub: textSub,
+        revByDay: revByDay,
+        days: days,
+        scopeTermine: scope,
+        headlineName: widget.isAdmin && _teamView ? 'Team' : widget.angemeldeterName,
+      );
+
+      final right = _RightPanel(
+        isDark: isDark,
+        cardBg: cardBg,
+        border: border,
+        textMain: textMain,
+        textSub: textSub,
+        weekRevenue: weekRevenue,
+        todayRevenue: todayRevenue,
+        idleMinutes: idleMinutes,
+        occupancyPct: occupancyPct,
+        busySlots: busySlots,
+        totalSlots: totalSlots,
+        freieHeute: freieHeute,
+        isAdmin: widget.isAdmin,
+        teamMode: widget.isAdmin && _teamView,
+      );
+
+      if (wide) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 7, child: left),
+            const SizedBox(width: 18),
+            Expanded(flex: 4, child: right),
           ],
-          selected: {_range},
-          onSelectionChanged: (s) => setState(() => _range = s.first),
-        ),
-      ],
+        );
+      }
 
-      // ✅ WICHTIG: ListView => KEIN Overflow mehr
-      child: LayoutBuilder(
-        builder: (context, c) {
-          final isWide = c.maxWidth >= 1100;
+      return Column(
+        children: [
+          left,
+          const SizedBox(height: 18),
+          right,
+        ],
+      );
+    }
 
-          final kpi = _mockKpis(_range);
-          final revenueByDay = _mockRevenueByDay(_range);
-          final totalRevenue = revenueByDay.fold<double>(0, (a, b) => a + b);
-
-          final idle = _mockIdleByDay(_range); // Minuten pro Tag
-          final idleTotalMin = idle.fold<int>(0, (a, b) => a + b);
-
-          final left = Column(
-            children: [
-              // KPI Row (wie dein Original)
-              Row(
+    return Scaffold(
+      backgroundColor: pageBg,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: _kpiCard(icon: Icons.event_available, title: 'Termine', value: '${kpi.termine}', sub: 'gebucht')),
-                  const SizedBox(width: 16),
-                  Expanded(child: _kpiCard(icon: Icons.speed, title: 'Auslastung', value: '${kpi.auslastung}%', sub: 'Durchschnitt', valueColor: Colors.green)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _kpiCard(icon: Icons.person_off, title: 'No-Shows', value: '${kpi.noShows}', sub: 'nicht erschienen', valueColor: Colors.orange)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _kpiCard(icon: Icons.payments_outlined, title: 'Umsatz', value: _eur(kpi.umsatz), sub: _rangeLabel(_range))),
+                  _TopBar(
+                    title: l10n?.statistics ?? 'Statistik',
+                    name: widget.angemeldeterName,
+                    isAdmin: widget.isAdmin,
+                    isDark: isDark,
+                    teamValue: _teamView,
+                    onTeamChanged: widget.isAdmin
+                        ? (v) => setState(() => _teamView = v)
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: content(c.maxWidth),
+                    ),
+                  ),
                 ],
-              ),
-
-              const SizedBox(height: 18),
-
-              // Umsatz-Verlauf (wie vorher) + "Gesamt" oben rechts (ohne Layout zu zerstören)
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Umsatz-Verlauf', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                              SizedBox(height: 6),
-                              Text('Trend nach Zeitraum', style: TextStyle(fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: _accent.withValues(alpha: 0.35)),
-                            color: _accent.withValues(alpha: 0.10),
-                          ),
-                          child: Text(
-                            'Gesamt: ${_eur(totalRevenue)}',
-                            style: const TextStyle(fontWeight: FontWeight.w900),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // kleiner als vorher + immer safe
-                    SizedBox(
-                      height: 240,
-                      child: BarChart(
-                        BarChartData(
-                          gridData: const FlGridData(show: false),
-                          borderData: FlBorderData(
-                            show: true,
-                            border: Border(
-                              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
-                            ),
-                          ),
-                          titlesData: FlTitlesData(
-                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 26,
-                                getTitlesWidget: (value, meta) {
-                                  const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-                                  final i = value.toInt();
-                                  if (i < 0 || i > 6) return const SizedBox.shrink();
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 10),
-                                    child: Text(days[i], style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          barGroups: List.generate(7, (i) {
-                            return BarChartGroupData(
-                              x: i,
-                              barRods: [
-                                BarChartRodData(
-                                  toY: revenueByDay[i],
-                                  width: 26,
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: _accent.withValues(alpha: 0.85),
-                                ),
-                              ],
-                            );
-                          }),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // ✅ Leerlaufanalyse ordentlich (Diplomarbeit-relevant)
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Leerlaufanalyse', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Gesamter Leerlauf im Zeitraum: ${_hm(idleTotalMin)}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 14),
-
-                    SizedBox(
-                      height: 160,
-                      child: BarChart(
-                        BarChartData(
-                          gridData: const FlGridData(show: false),
-                          borderData: FlBorderData(
-                            show: true,
-                            border: Border(
-                              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.10)),
-                            ),
-                          ),
-                          titlesData: FlTitlesData(
-                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 22,
-                                getTitlesWidget: (value, meta) {
-                                  const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-                                  final i = value.toInt();
-                                  if (i < 0 || i > 6) return const SizedBox.shrink();
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 8),
-                                    child: Text(days[i], style: const TextStyle(fontWeight: FontWeight.w700)),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          barGroups: List.generate(7, (i) {
-                            return BarChartGroupData(
-                              x: i,
-                              barRods: [
-                                BarChartRodData(
-                                  toY: (idle[i] / 60.0), // Stunden
-                                  width: 20,
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: Colors.blueGrey.withValues(alpha: 0.55),
-                                ),
-                              ],
-                            );
-                          }),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // kurze “Interpretation” fürs Diplomarbeit-Feeling
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        color: Colors.white.withValues(alpha: 0.04),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                      ),
-                      child: const Text(
-                        'Interpretation (Mock): Hoher Leerlauf an bestimmten Tagen/Zeitslots deutet auf Optimierungspotenzial hin '
-                        '(z.B. Personalplanung, Termin-Slots bündeln, Aktionen in schwachen Zeiten).',
-                        style: TextStyle(fontWeight: FontWeight.w600, height: 1.35),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-
-          final right = Column(
-            children: [
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Service-Mix', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 6),
-                    const Text('Anteil nach Leistung', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 14),
-                    _serviceRow('Haarschnitt', 0.42),
-                    const SizedBox(height: 12),
-                    _serviceRow('Bart', 0.18),
-                    const SizedBox(height: 12),
-                    _serviceRow('Farbe', 0.22),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Mitarbeiter', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 6),
-                    const Text('Termine · Auslastung · No-Shows (Mock)', style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 14),
-                    _staffTile('Sinan', '34 Termine · 82%', 'No-Shows: 2'),
-                    const SizedBox(height: 12),
-                    _staffTile('Alperen', '28 Termine · 76%', 'No-Shows: 1'),
-                    const SizedBox(height: 12),
-                    _staffTile('Emre', '31 Termine · 79%', 'No-Shows: 2'),
-                  ],
-                ),
-              ),
-            ],
-          );
-
-          return ListView(
-            children: [
-              if (isWide)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: left),
-                    const SizedBox(width: 18),
-                    SizedBox(width: 420, child: right),
-                  ],
-                )
-              else
-                Column(
-                  children: [
-                    left,
-                    const SizedBox(height: 18),
-                    right,
-                  ],
-                ),
-              const SizedBox(height: 24),
-            ],
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
+}
 
-  Widget _kpiCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required String sub,
-    Color? valueColor,
-  }) {
-    return AppCard(
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: _accent.withValues(alpha: 0.12),
-              border: Border.all(color: _accent.withValues(alpha: 0.25)),
+class _TopBar extends StatelessWidget {
+  final String title;
+  final String name;
+  final bool isAdmin;
+  final bool isDark;
+
+  final bool teamValue;
+  final ValueChanged<bool>? onTeamChanged;
+
+  const _TopBar({
+    required this.title,
+    required this.name,
+    required this.isAdmin,
+    required this.isDark,
+    required this.teamValue,
+    required this.onTeamChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final border = isDark ? Colors.white12 : Colors.black12;
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 22,
+              color: isDark ? Colors.white : Colors.black,
             ),
-            child: Icon(icon, color: _accent),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+
+        if (onTeamChanged != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white10 : Colors.black12,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: border),
+            ),
+            child: Row(
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 6),
-                Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: valueColor)),
-                Text(sub, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  teamValue ? 'Team' : 'Nur ich',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Switch.adaptive(
+                  value: teamValue,
+                  onChanged: onTeamChanged,
+                ),
               ],
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white10 : Colors.black12,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                isAdmin ? Icons.verified_user : Icons.person,
+                size: 18,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$name${isAdmin ? ' (Admin)' : ''}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LeftPanel extends StatelessWidget {
+  final bool isDark;
+  final Color cardBg;
+  final Color border;
+  final Color textMain;
+  final Color textSub;
+
+  final List<double> revByDay;
+  final List<DateTime> days;
+  final List<Termin> scopeTermine;
+  final String headlineName;
+
+  const _LeftPanel({
+    required this.isDark,
+    required this.cardBg,
+    required this.border,
+    required this.textMain,
+    required this.textSub,
+    required this.revByDay,
+    required this.days,
+    required this.scopeTermine,
+    required this.headlineName,
+  });
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  bool _busyAt(DateTime slotStart, DateTime slotEnd) {
+    return scopeTermine.any((t) => t.start.isBefore(slotEnd) && t.end.isAfter(slotStart) && t.status != Termin.statusAbgesagt);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxRev = revByDay.isEmpty ? 0.0 : revByDay.reduce((a, b) => a > b ? a : b);
+
+    final times = List.generate(24, (i) {
+      final h = 8 + (i ~/ 2);
+      final m = (i % 2) * 30;
+      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+    });
+
+    final barColor = const Color(0xFFCC5C4C).withOpacity(isDark ? 0.92 : 0.95);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Umsatz-Verlauf (Woche)',
+            style: TextStyle(fontWeight: FontWeight.w900, color: textMain, fontSize: 16),
+          ),
+          const SizedBox(height: 10),
+
+          // ✅ kompakter, kein Overflow, weniger whitespace
+          SizedBox(
+            height: 150,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(6, (i) {
+                final v = revByDay[i];
+                final h = (maxRev <= 0) ? 0.0 : (v / maxRev);
+                final barH = (h * 100).clamp(0.0, 100.0);
+                final label = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'][i];
+
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Container(
+                          height: barH < 8 ? 8 : barH,
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          label,
+                          style: TextStyle(color: textSub, fontWeight: FontWeight.w800),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+
+          const SizedBox(height: 18),
+          Divider(color: isDark ? Colors.white10 : Colors.black12),
+          const SizedBox(height: 14),
+
+          Text(
+            'Leerlauf-Heatmap (pro Tag/Zeitslot)',
+            style: TextStyle(fontWeight: FontWeight.w900, color: textMain, fontSize: 16),
+          ),
+          const SizedBox(height: 6),
+          Text('Für: $headlineName', style: TextStyle(color: textSub, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+
+          // ✅ Legende (keine “grauen Blöcke” mehr unklar)
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _LegendDot(label: 'Leerlauf (frei)', color: const Color(0xFFCC5C4C).withOpacity(0.8), textColor: textSub),
+              _LegendDot(label: 'Belegt', color: const Color(0xFF2E7DDB).withOpacity(0.8), textColor: textSub),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white10 : Colors.black.withAlpha(8),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const SizedBox(width: 58),
+                      ...List.generate(6, (i) {
+                        final txt = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'][i];
+                        return SizedBox(
+                          width: 44,
+                          child: Center(
+                            child: Text(txt, style: TextStyle(color: textSub, fontWeight: FontWeight.w800)),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  ...List.generate(times.length, (r) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 58,
+                            child: Text(times[r], style: TextStyle(color: textSub, fontWeight: FontWeight.w800)),
+                          ),
+                          ...List.generate(6, (c) {
+                            final d = days[c];
+                            final slotStart = DateTime(d.year, d.month, d.day, 8 + (r ~/ 2), (r % 2) * 30);
+                            final slotEnd = slotStart.add(const Duration(minutes: 30));
+
+                            final busy = _busyAt(slotStart, slotEnd);
+
+                            final color = busy
+                                ? const Color(0xFF2E7DDB).withOpacity(0.75)
+                                : const Color(0xFFCC5C4C).withOpacity(0.75);
+
+                            return Container(
+                              width: 44,
+                              height: 18,
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _serviceRow(String name, double pct) {
+class _LegendDot extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color textColor;
+
+  const _LegendDot({
+    required this.label,
+    required this.color,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Text(name, style: const TextStyle(fontWeight: FontWeight.w800)),
-        ),
-        SizedBox(
-          width: 180,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: pct,
-              minHeight: 10,
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
-              valueColor: AlwaysStoppedAnimation(_accent.withValues(alpha: 0.85)),
-            ),
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(5),
           ),
         ),
-        const SizedBox(width: 12),
-        Text('${(pct * 100).round()}%', style: const TextStyle(fontWeight: FontWeight.w900)),
+        const SizedBox(width: 8),
+        Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.w800)),
       ],
     );
   }
+}
 
-  Widget _staffTile(String name, String left, String right) {
+class _RightPanel extends StatelessWidget {
+  final bool isDark;
+  final Color cardBg;
+  final Color border;
+  final Color textMain;
+  final Color textSub;
+
+  final double weekRevenue;
+  final double todayRevenue;
+  final int idleMinutes;
+  final int occupancyPct;
+  final int busySlots;
+  final int totalSlots;
+
+  final List<FreiesZeitfenster> freieHeute;
+  final bool isAdmin;
+  final bool teamMode;
+
+  const _RightPanel({
+    required this.isDark,
+    required this.cardBg,
+    required this.border,
+    required this.textMain,
+    required this.textSub,
+    required this.weekRevenue,
+    required this.todayRevenue,
+    required this.idleMinutes,
+    required this.occupancyPct,
+    required this.busySlots,
+    required this.totalSlots,
+    required this.freieHeute,
+    required this.isAdmin,
+    required this.teamMode,
+  });
+
+  String euro(double v) => '€ ${v.toStringAsFixed(0)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = [
+      _MetricTile(
+        title: 'Gesamtumsatz (Woche)',
+        value: euro(weekRevenue),
+        icon: Icons.payments_outlined,
+      ),
+      _MetricTile(
+        title: 'Umsatz heute',
+        value: euro(todayRevenue),
+        icon: Icons.calendar_today_outlined,
+      ),
+      _MetricTile(
+        title: 'Leerlauf heute',
+        value: '${idleMinutes} min',
+        subtitle: teamMode ? 'Team' : 'für mich',
+        icon: Icons.timer_outlined,
+      ),
+      _MetricTile(
+        title: 'Auslastung heute',
+        value: '$occupancyPct%',
+        subtitle: '$busySlots/$totalSlots Slots',
+        icon: Icons.pie_chart_outline,
+      ),
+    ];
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...tiles.map((t) => Padding(padding: const EdgeInsets.only(bottom: 12), child: t)),
+
+          const SizedBox(height: 8),
+          Divider(color: isDark ? Colors.white10 : Colors.black12),
+          const SizedBox(height: 10),
+
+          Text(
+            'Freie Slots heute (Top)',
+            style: TextStyle(color: textMain, fontWeight: FontWeight.w900, fontSize: 16),
+          ),
+          const SizedBox(height: 10),
+
+          ...freieHeute.take(4).map((f) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white10 : Colors.black.withAlpha(8),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.timer_outlined, color: isDark ? Colors.white70 : Colors.black54),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        f.beschriftung,
+                        style: TextStyle(color: textMain, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCC5C4C).withOpacity(0.75),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        'frei',
+                        style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+
+          if (isAdmin) ...[
+            const SizedBox(height: 8),
+            Divider(color: isDark ? Colors.white10 : Colors.black12),
+            const SizedBox(height: 10),
+            Text(
+              'Admin-Tools (später)',
+              style: TextStyle(color: textMain, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Export / erweiterte Filter / Team-Auswertungen',
+              style: TextStyle(color: textSub, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  final String title;
+  final String value;
+  final String? subtitle;
+  final IconData icon;
+
+  const _MetricTile({
+    required this.title,
+    required this.value,
+    required this.icon,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? Colors.white10 : Colors.black.withAlpha(8);
+    final border = isDark ? Colors.white12 : Colors.black12;
+
+    final textMain = isDark ? Colors.white : Colors.black;
+    final textSub = isDark ? Colors.white70 : Colors.black54;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: bg,
         borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withValues(alpha: 0.03),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: border),
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
+              color: isDark ? Colors.white10 : Colors.black.withAlpha(10),
               borderRadius: BorderRadius.circular(14),
-              color: _accent.withValues(alpha: 0.12),
-              border: Border.all(color: _accent.withValues(alpha: 0.25)),
+              border: Border.all(color: border),
             ),
-            child: Icon(Icons.person, color: _accent.withValues(alpha: 0.85)),
+            child: Icon(icon, color: textMain),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w900)),
-                Text(left, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(title, style: TextStyle(color: textSub, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(value, style: TextStyle(color: textMain, fontWeight: FontWeight.w900, fontSize: 18)),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!, style: TextStyle(color: textSub, fontWeight: FontWeight.w800)),
+                ],
               ],
             ),
           ),
-          Text(right, style: const TextStyle(fontWeight: FontWeight.w800)),
         ],
       ),
     );
   }
-
-  // ---- MOCKS (später ersetzt du das easy mit echten Daten) ----
-
-  _Kpis _mockKpis(StatsRange r) {
-    switch (r) {
-      case StatsRange.week:
-        return const _Kpis(termine: 178, auslastung: 78, noShows: 11, umsatz: 5770);
-      case StatsRange.month:
-        return const _Kpis(termine: 712, auslastung: 74, noShows: 41, umsatz: 22140);
-      case StatsRange.year:
-        return const _Kpis(termine: 8420, auslastung: 71, noShows: 390, umsatz: 268400);
-    }
-  }
-
-  List<double> _mockRevenueByDay(StatsRange r) {
-    // sieht so aus wie in deinem Original-Screen
-    if (r == StatsRange.week) return [820, 760, 900, 520, 1120, 980, 670];
-    if (r == StatsRange.month) return [3100, 2800, 3600, 2400, 4200, 3900, 3140];
-    return [12000, 9800, 14500, 11000, 16800, 15200, 12500];
-  }
-
-  List<int> _mockIdleByDay(StatsRange r) {
-    // Minuten (Leerlauf) – bewusst “realistisch”: Montag/Mittwoch besser, Do/SO mehr Leerlauf
-    if (r == StatsRange.week) return [120, 160, 90, 210, 80, 110, 240];
-    if (r == StatsRange.month) return [520, 640, 430, 780, 410, 560, 900];
-    return [6200, 7100, 5400, 8200, 5100, 6900, 9400];
-  }
-
-  String _rangeLabel(StatsRange r) {
-    switch (r) {
-      case StatsRange.week:
-        return 'letzte 7 Tage';
-      case StatsRange.month:
-        return 'letzte 30 Tage';
-      case StatsRange.year:
-        return 'dieses Jahr';
-    }
-  }
-
-  String _eur(num n) {
-    final s = n.toStringAsFixed(0);
-    final withDots = s.replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
-    return '$withDots €';
-  }
-
-  String _hm(int minutes) {
-    final h = minutes ~/ 60;
-    final m = minutes % 60;
-    return '${h}h ${m}m';
-  }
-}
-
-class _Kpis {
-  final int termine;
-  final int auslastung;
-  final int noShows;
-  final int umsatz;
-
-  const _Kpis({
-    required this.termine,
-    required this.auslastung,
-    required this.noShows,
-    required this.umsatz,
-  });
 }

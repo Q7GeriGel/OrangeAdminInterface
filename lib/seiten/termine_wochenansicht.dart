@@ -9,7 +9,12 @@ import '../widgets/kalender/termin_details_dialog.dart';
 import '../widgets/kalender/termin_create_dialog.dart';
 
 class TermineWochenansicht extends StatelessWidget {
-  const TermineWochenansicht({super.key});
+  final bool isAdmin;
+
+  const TermineWochenansicht({
+    super.key,
+    this.isAdmin = false, // ✅ default -> kein missing_required_argument mehr
+  });
 
   static const _pageBg = Color(0xFFF4F4F4);
   static const _panelBlue = Color(0xFF355573);
@@ -34,12 +39,19 @@ class TermineWochenansicht extends StatelessWidget {
                       style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
                     ),
                   ),
+
+                  // Du kannst das für Admin/Non-Admin anders machen wenn du willst:
                   OutlinedButton.icon(
-                    onPressed: () => openCreateTerminFlow(context: context, ctrl: ctrl),
+                    onPressed: () => openCreateTerminFlow(
+                      context: context,
+                      ctrl: ctrl,
+                    ),
                     icon: const Icon(Icons.add),
-                    label: const Text('Neuer Termin'),
+                    label: Text(isAdmin ? 'Neuer Termin (Admin)' : 'Neuer Termin'),
                   ),
+
                   const SizedBox(width: 12),
+
                   WeeklyHeader(
                     monday: ctrl.currentWeekMonday,
                     onPrev: ctrl.prevWeek,
@@ -88,10 +100,13 @@ class TermineWochenansicht extends StatelessWidget {
                                       );
                                       ctrl.moveTermin(t.id, newStart);
                                     },
-                                    onChangeDuration: (minutes) => ctrl.updateDuration(t.id, minutes),
+                                    onChangeDuration: (minutes) =>
+                                        ctrl.updateDuration(t.id, minutes),
                                     onToggleStatus: () => ctrl.toggleStatus(t.id),
                                     onCancel: () => ctrl.cancelTermin(t.id),
-                                    onDelete: () => ctrl.deleteTermin(t.id),
+
+                                    // Wenn du willst, nur Admin darf löschen:
+                                    onDelete: isAdmin ? () => ctrl.deleteTermin(t.id) : () {},
                                   );
                                 },
                               ),

@@ -21,12 +21,10 @@ void main() {
 }
 
 /// ✅ Simple Mock-Datenquelle (RAM) – ersetzt später DB/REST/Prefs
-/// -> erzeugt automatisch Demo-Termine, damit man sofort was sieht
 class InMemoryTerminquelle implements Terminquelle {
   final Map<String, List<Termin>> _store = {};
 
   String _key(DateTime monday) => '${monday.year}-${monday.month}-${monday.day}';
-
   bool _seeded(DateTime monday) => _store.containsKey(_key(monday));
 
   void _seedWeek(DateTime monday) {
@@ -97,7 +95,7 @@ class InMemoryTerminquelle implements Terminquelle {
         start: d(3, 11, 0),
         end: d(3, 11, 30),
         kundeName: 'Ali',
-        mitarbeiterName: 'Sedad',
+        mitarbeiterName: 'Sedat',
         status: Termin.statusBestaetigt,
         service: 'Haarschnitt',
         price: 25,
@@ -131,23 +129,19 @@ class FriseurOrangeApp extends StatelessWidget {
         ChangeNotifierProvider<AppSettingsController>(
           create: (_) => AppSettingsController()..load(),
         ),
-
         Provider<Terminquelle>(
           create: (_) => InMemoryTerminquelle(),
         ),
-
         Provider<TerminplanService>(
           create: (ctx) => TerminplanService(
             quelle: ctx.read<Terminquelle>(),
           ),
         ),
-
         Provider<TerminplanRepository>(
           create: (ctx) => TerminplanRepository(
             ctx.read<TerminplanService>(),
           ),
         ),
-
         ChangeNotifierProvider<TerminplanController>(
           create: (ctx) => TerminplanController(
             ctx.read<TerminplanService>(),
@@ -164,6 +158,12 @@ class FriseurOrangeApp extends StatelessWidget {
             locale: settings.locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+
+            // ✅ wichtig für Logout ohne Import-Circle
+            routes: {
+              '/login': (_) => const AuthGate(),
+            },
+
             home: const AuthGate(),
           );
         },

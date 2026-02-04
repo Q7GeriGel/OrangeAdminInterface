@@ -5,15 +5,18 @@ class Sidebar extends StatelessWidget {
   final int ausgewaehlterIndex;
   final ValueChanged<int> beimAuswaehlen;
 
+  /// ✅ echter Logout (optional)
+  final VoidCallback? onLogout;
+
   const Sidebar({
     super.key,
     required this.ausgewaehlterIndex,
     required this.beimAuswaehlen,
+    this.onLogout,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Sidebar darf ruhig dunkel bleiben, passt zu deinem Look
     const bg = Color(0xFF0B0E14);
 
     final items = <_SideItem>[
@@ -57,7 +60,9 @@ class Sidebar extends StatelessWidget {
               ),
             ],
           ),
+
           const SizedBox(height: 18),
+
           Expanded(
             child: ListView.separated(
               itemCount: items.length,
@@ -73,6 +78,22 @@ class Sidebar extends StatelessWidget {
               },
             ),
           ),
+
+          const SizedBox(height: 12),
+          Divider(color: Colors.white.withAlpha(18), height: 1),
+          const SizedBox(height: 12),
+
+          if (onLogout != null)
+            _SideButton(
+              label: "Logout",
+              icon: Icons.logout,
+              selected: false,
+              onTap: onLogout!,
+              // bisschen “danger” look, aber im selben Style
+              forceBorderColor: AppColors.orange,
+              forceIconColor: AppColors.orange,
+              forceTextColor: Colors.white,
+            ),
         ],
       ),
     );
@@ -91,17 +112,27 @@ class _SideButton extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  final Color? forceBorderColor;
+  final Color? forceIconColor;
+  final Color? forceTextColor;
+
   const _SideButton({
     required this.label,
     required this.icon,
     required this.selected,
     required this.onTap,
+    this.forceBorderColor,
+    this.forceIconColor,
+    this.forceTextColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final bg = selected ? const Color(0xFF171B22) : const Color(0xFF0F131B);
-    final border = selected ? AppColors.orange : Colors.white10;
+    final border = forceBorderColor ?? (selected ? AppColors.orange : Colors.white10);
+
+    final iconColor = forceIconColor ?? (selected ? AppColors.orange : Colors.white70);
+    final textColor = forceTextColor ?? (selected ? Colors.white : Colors.white70);
 
     return InkWell(
       onTap: onTap,
@@ -115,13 +146,13 @@ class _SideButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, color: selected ? AppColors.orange : Colors.white70),
+            Icon(icon, color: iconColor),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 label,
                 style: TextStyle(
-                  color: selected ? Colors.white : Colors.white70,
+                  color: textColor,
                   fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
                 ),
               ),

@@ -16,7 +16,6 @@ class _AuthGateState extends State<AuthGate> {
 
   bool _loading = false;
 
-  /// username (immer klein) -> userinfo
   final Map<String, _UserInfo> _users = {
     'serkan': const _UserInfo(password: '123', isAdmin: false, displayName: 'serkan'),
     'sedat': const _UserInfo(password: '123', isAdmin: true, displayName: 'sedat'),
@@ -31,7 +30,6 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   String _t(AppLocalizations? l10n, String fallback, String Function(AppLocalizations l) pick) {
-    // falls ARB-Keys noch fehlen -> fallback nutzen
     if (l10n == null) return fallback;
     try {
       return pick(l10n);
@@ -49,9 +47,7 @@ class _AuthGateState extends State<AuthGate> {
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            _t(l10n, 'Bitte Benutzername und Passwort eingeben.', (l) => l.emptyCredentials),
-          ),
+          content: Text(_t(l10n, 'Bitte Benutzername und Passwort eingeben.', (l) => l.emptyCredentials)),
         ),
       );
       return;
@@ -67,9 +63,7 @@ class _AuthGateState extends State<AuthGate> {
       if (info == null || info.password != password) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              _t(l10n, 'Falsche Zugangsdaten.', (l) => l.wrongCredentials),
-            ),
+            content: Text(_t(l10n, 'Falsche Zugangsdaten.', (l) => l.wrongCredentials)),
           ),
         );
         return;
@@ -77,10 +71,12 @@ class _AuthGateState extends State<AuthGate> {
 
       if (!mounted) return;
 
-      // ✅ KEIN isAdmin übergeben -> keine Fehler mehr in Startseite
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => Startseite(benutzername: info.displayName),
+          builder: (_) => Startseite(
+            benutzername: info.displayName,
+            isAdmin: info.isAdmin, // ✅ Admin kommt an
+          ),
         ),
       );
     } finally {
@@ -129,7 +125,6 @@ class _AuthGateState extends State<AuthGate> {
                   ),
                 ),
                 const SizedBox(height: 14),
-
                 TextField(
                   controller: _userCtrl,
                   style: const TextStyle(color: Colors.white),
@@ -144,9 +139,7 @@ class _AuthGateState extends State<AuthGate> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 TextField(
                   controller: _passCtrl,
                   obscureText: true,
@@ -162,9 +155,7 @@ class _AuthGateState extends State<AuthGate> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 14),
-
                 SizedBox(
                   width: double.infinity,
                   height: 46,
@@ -183,15 +174,10 @@ class _AuthGateState extends State<AuthGate> {
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text(
-                            signInText,
-                            style: const TextStyle(fontWeight: FontWeight.w900),
-                          ),
+                        : Text(signInText, style: const TextStyle(fontWeight: FontWeight.w900)),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 const Text(
                   'Zulässige Accounts: serkan / sedat / samet (Passwort: 123)',
                   style: TextStyle(color: Colors.white54, fontSize: 12),
@@ -207,7 +193,7 @@ class _AuthGateState extends State<AuthGate> {
 
 class _UserInfo {
   final String password;
-  final bool isAdmin; // für später (Rechte)
+  final bool isAdmin;
   final String displayName;
 
   const _UserInfo({
