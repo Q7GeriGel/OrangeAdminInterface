@@ -535,6 +535,162 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Randevu kaydedildi ✅'**
   String get successAppointmentSaved;
+
+  /// No description provided for @allowedAccountsHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kullanılabilir hesaplar: serkan / sedat / samet (Şifre: 123)'**
+  String get allowedAccountsHint;
+
+  /// No description provided for @logout.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çıkış yap'**
+  String get logout;
+
+  /// No description provided for @logoutDone.
+  ///
+  /// In tr, this message translates to:
+  /// **'Çıkış yapıldı.'**
+  String get logoutDone;
+
+  /// No description provided for @today.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bugün'**
+  String get today;
+
+  /// No description provided for @prevWeek.
+  ///
+  /// In tr, this message translates to:
+  /// **'Önceki hafta'**
+  String get prevWeek;
+
+  /// No description provided for @nextWeek.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sonraki hafta'**
+  String get nextWeek;
+
+  /// No description provided for @close.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kapat'**
+  String get close;
+
+  /// No description provided for @details.
+  ///
+  /// In tr, this message translates to:
+  /// **'Detaylar'**
+  String get details;
+
+  /// No description provided for @moveTime.
+  ///
+  /// In tr, this message translates to:
+  /// **'Saati değiştir'**
+  String get moveTime;
+
+  /// No description provided for @changeDuration.
+  ///
+  /// In tr, this message translates to:
+  /// **'Süreyi değiştir'**
+  String get changeDuration;
+
+  /// No description provided for @toggleStatus.
+  ///
+  /// In tr, this message translates to:
+  /// **'Durumu değiştir'**
+  String get toggleStatus;
+
+  /// No description provided for @cancelAppointment.
+  ///
+  /// In tr, this message translates to:
+  /// **'İptal et'**
+  String get cancelAppointment;
+
+  /// No description provided for @delete.
+  ///
+  /// In tr, this message translates to:
+  /// **'Sil'**
+  String get delete;
+
+  /// No description provided for @customerRequired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Lütfen müşteri adını girin.'**
+  String get customerRequired;
+
+  /// No description provided for @totalRevenue.
+  ///
+  /// In tr, this message translates to:
+  /// **'Toplam ciro'**
+  String get totalRevenue;
+
+  /// No description provided for @allowedAccountsNote.
+  ///
+  /// In tr, this message translates to:
+  /// **'İzinli hesaplar: serkan / sedat / samet (Şifre: 123)'**
+  String get allowedAccountsNote;
+
+  /// No description provided for @account.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hesap'**
+  String get account;
+
+  /// No description provided for @roleAdmin.
+  ///
+  /// In tr, this message translates to:
+  /// **'Admin'**
+  String get roleAdmin;
+
+  /// No description provided for @roleStaff.
+  ///
+  /// In tr, this message translates to:
+  /// **'Personel'**
+  String get roleStaff;
+
+  /// No description provided for @employeesSubtitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'İç sistem • Ekip & Notlar'**
+  String get employeesSubtitle;
+
+  /// No description provided for @freeSlotsToday.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bugün boş saatler'**
+  String get freeSlotsToday;
+
+  /// No description provided for @notesTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Notlar'**
+  String get notesTitle;
+
+  /// No description provided for @notesSaved.
+  ///
+  /// In tr, this message translates to:
+  /// **'Notlar kaydedildi ✅'**
+  String get notesSaved;
+
+  /// No description provided for @notesHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Notlar…'**
+  String get notesHint;
+
+  /// No description provided for @noPermissionAdminOnly.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yetki yok (sadece admin).'**
+  String get noPermissionAdminOnly;
+
+  /// No description provided for @saved.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kaydedildi ✅'**
+  String get saved;
 }
 
 class _AppLocalizationsDelegate

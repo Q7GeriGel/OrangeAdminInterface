@@ -226,4 +226,84 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get successAppointmentSaved => 'Randevu kaydedildi ✅';
+
+  @override
+  String get allowedAccountsHint =>
+      'Kullanılabilir hesaplar: serkan / sedat / samet (Şifre: 123)';
+
+  @override
+  String get logout => 'Çıkış yap';
+
+  @override
+  String get logoutDone => 'Çıkış yapıldı.';
+
+  @override
+  String get today => 'Bugün';
+
+  @override
+  String get prevWeek => 'Önceki hafta';
+
+  @override
+  String get nextWeek => 'Sonraki hafta';
+
+  @override
+  String get close => 'Kapat';
+
+  @override
+  String get details => 'Detaylar';
+
+  @override
+  String get moveTime => 'Saati değiştir';
+
+  @override
+  String get changeDuration => 'Süreyi değiştir';
+
+  @override
+  String get toggleStatus => 'Durumu değiştir';
+
+  @override
+  String get cancelAppointment => 'İptal et';
+
+  @override
+  String get delete => 'Sil';
+
+  @override
+  String get customerRequired => 'Lütfen müşteri adını girin.';
+
+  @override
+  String get totalRevenue => 'Toplam ciro';
+
+  @override
+  String get allowedAccountsNote =>
+      'İzinli hesaplar: serkan / sedat / samet (Şifre: 123)';
+
+  @override
+  String get account => 'Hesap';
+
+  @override
+  String get roleAdmin => 'Admin';
+
+  @override
+  String get roleStaff => 'Personel';
+
+  @override
+  String get employeesSubtitle => 'İç sistem • Ekip & Notlar';
+
+  @override
+  String get freeSlotsToday => 'Bugün boş saatler';
+
+  @override
+  String get notesTitle => 'Notlar';
+
+  @override
+  String get notesSaved => 'Notlar kaydedildi ✅';
+
+  @override
+  String get notesHint => 'Notlar…';
+
+  @override
+  String get noPermissionAdminOnly => 'Yetki yok (sadece admin).';
+
+  @override
+  String get saved => 'Kaydedildi ✅';
 }

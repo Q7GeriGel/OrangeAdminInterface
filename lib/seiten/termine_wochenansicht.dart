@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../controllers/terminplan_controller.dart';
 import '../models/termin.dart';
+import '../l10n/gen/app_localizations.dart';
+
 import '../widgets/kalender/weekly_header.dart';
 import '../widgets/kalender/weekly_grid.dart';
 import '../widgets/kalender/termin_details_dialog.dart';
@@ -13,18 +15,28 @@ class TermineWochenansicht extends StatelessWidget {
 
   const TermineWochenansicht({
     super.key,
-    this.isAdmin = false, // ✅ default -> kein missing_required_argument mehr
+    required this.isAdmin,
   });
 
-  static const _pageBg = Color(0xFFF4F4F4);
-  static const _panelBlue = Color(0xFF355573);
+  void _noPerm(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l.noPermissionAdminOnly)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final ctrl = context.watch<TerminplanController>();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageBg = Theme.of(context).scaffoldBackgroundColor;
+    final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
+    final inner = isDark ? const Color(0xFF141D27) : Colors.white;
+
     return Scaffold(
-      backgroundColor: _pageBg,
+      backgroundColor: pageBg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
@@ -33,21 +45,19 @@ class TermineWochenansicht extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Terminübersicht',
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                      l.appointmentsOverview,
+                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
                     ),
                   ),
 
-                  // Du kannst das für Admin/Non-Admin anders machen wenn du willst:
                   OutlinedButton.icon(
-                    onPressed: () => openCreateTerminFlow(
-                      context: context,
-                      ctrl: ctrl,
-                    ),
+                    onPressed: isAdmin
+                        ? () => openCreateTerminFlow(context: context, ctrl: ctrl)
+                        : () => _noPerm(context),
                     icon: const Icon(Icons.add),
-                    label: Text(isAdmin ? 'Neuer Termin (Admin)' : 'Neuer Termin'),
+                    label: Text(l.newAppointment),
                   ),
 
                   const SizedBox(width: 12),
@@ -65,7 +75,7 @@ class TermineWochenansicht extends StatelessWidget {
               Expanded(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: _panelBlue,
+                    color: panel,
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: Padding(
@@ -73,7 +83,7 @@ class TermineWochenansicht extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(18),
                       child: Material(
-                        color: Colors.white,
+                        color: inner,
                         child: ctrl.loading
                             ? const Center(child: CircularProgressIndicator())
                             : WeeklyGrid(
@@ -81,15 +91,20 @@ class TermineWochenansicht extends StatelessWidget {
                                 appointments: ctrl.termine,
                                 startHour: 8,
                                 endHour: 20,
-                                onTapEmptySlot: (slot) => openCreateTerminFlow(
-                                  context: context,
-                                  ctrl: ctrl,
-                                  presetStart: slot,
-                                ),
+
+                                onTapEmptySlot: (slot) => isAdmin
+                                    ? openCreateTerminFlow(
+                                        context: context,
+                                        ctrl: ctrl,
+                                        presetStart: slot,
+                                      )
+                                    : _noPerm(context),
+
                                 onDoubleTapTermin: (Termin t) async {
                                   await showTerminDetailsDialog(
                                     context: context,
                                     termin: t,
+                                    canEdit: isAdmin,
                                     onMove: (newTime) {
                                       final newStart = DateTime(
                                         t.start.year,
@@ -100,13 +115,10 @@ class TermineWochenansicht extends StatelessWidget {
                                       );
                                       ctrl.moveTermin(t.id, newStart);
                                     },
-                                    onChangeDuration: (minutes) =>
-                                        ctrl.updateDuration(t.id, minutes),
+                                    onChangeDuration: (minutes) => ctrl.updateDuration(t.id, minutes),
                                     onToggleStatus: () => ctrl.toggleStatus(t.id),
                                     onCancel: () => ctrl.cancelTermin(t.id),
-
-                                    // Wenn du willst, nur Admin darf löschen:
-                                    onDelete: isAdmin ? () => ctrl.deleteTermin(t.id) : () {},
+                                    onDelete: () => ctrl.deleteTermin(t.id),
                                   );
                                 },
                               ),

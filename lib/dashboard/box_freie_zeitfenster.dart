@@ -25,10 +25,13 @@ class _BoxFreieZeitfensterState extends State<BoxFreieZeitfenster> {
   Widget build(BuildContext context) {
     final p = context.watch<TerminplanController>();
 
+    // ✅ statt DashboardUi.panelBlue -> Theme Secondary (bei dir blau)
+    final accentBlue = Theme.of(context).colorScheme.secondary;
+
     final entries = p.freie.map((f) {
       return DashboardEntry(
         f.beschriftung,
-        accent: DashboardUi.panelBlue,
+        accent: accentBlue,
         trailing: const DashboardPill(text: 'frei'),
       );
     }).toList();
@@ -38,7 +41,7 @@ class _BoxFreieZeitfensterState extends State<BoxFreieZeitfenster> {
       titel: 'Freie Zeitfenster heute',
       eintraege: entries,
       height: 360,
-      loading: p.lade,
+      loading: p.lade, // lass ich wie bei dir (Controller-Property)
       emptyText: 'Heute keine freien Slots',
     );
   }

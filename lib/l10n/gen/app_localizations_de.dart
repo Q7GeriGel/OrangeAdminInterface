@@ -227,4 +227,84 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get successAppointmentSaved => 'Termin gespeichert ✅';
+
+  @override
+  String get allowedAccountsHint =>
+      'Zulässige Accounts: serkan / sedat / samet (Passwort: 123)';
+
+  @override
+  String get logout => 'Ausloggen';
+
+  @override
+  String get logoutDone => 'Du wurdest ausgeloggt.';
+
+  @override
+  String get today => 'Heute';
+
+  @override
+  String get prevWeek => 'Vorherige Woche';
+
+  @override
+  String get nextWeek => 'Nächste Woche';
+
+  @override
+  String get close => 'Schließen';
+
+  @override
+  String get details => 'Details';
+
+  @override
+  String get moveTime => 'Uhrzeit ändern';
+
+  @override
+  String get changeDuration => 'Dauer ändern';
+
+  @override
+  String get toggleStatus => 'Status wechseln';
+
+  @override
+  String get cancelAppointment => 'Stornieren';
+
+  @override
+  String get delete => 'Löschen';
+
+  @override
+  String get customerRequired => 'Bitte Kundennamen eingeben.';
+
+  @override
+  String get totalRevenue => 'Gesamtumsatz';
+
+  @override
+  String get allowedAccountsNote =>
+      'Erlaubte Accounts: serkan / sedat / samet (PW: 123)';
+
+  @override
+  String get account => 'Konto';
+
+  @override
+  String get roleAdmin => 'Admin';
+
+  @override
+  String get roleStaff => 'Mitarbeiter';
+
+  @override
+  String get employeesSubtitle => 'Intern • Team-Übersicht & Notizen';
+
+  @override
+  String get freeSlotsToday => 'Freie Zeitfenster heute';
+
+  @override
+  String get notesTitle => 'Notizen';
+
+  @override
+  String get notesSaved => 'Notizen gespeichert ✅';
+
+  @override
+  String get notesHint => 'Notizen…';
+
+  @override
+  String get noPermissionAdminOnly => 'Keine Berechtigung (nur Admin).';
+
+  @override
+  String get saved => 'Gespeichert ✅';
 }

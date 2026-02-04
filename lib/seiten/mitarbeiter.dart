@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
+
 import '../widgets/app_page.dart';
 import '../widgets/theme/app_tokens.dart';
+import '../widgets/account_panel.dart';
 
 class MitarbeiterSeite extends StatefulWidget {
   final String benutzername;
 
-  const MitarbeiterSeite({super.key, required this.benutzername});
+  // ✅ für Sedat
+  final bool isAdmin;
+  final String aktiverAccount;
+  final ValueChanged<String> onAccountChanged;
+
+  const MitarbeiterSeite({
+    super.key,
+    required this.benutzername,
+    required this.isAdmin,
+    required this.aktiverAccount,
+    required this.onAccountChanged,
+  });
 
   @override
   State<MitarbeiterSeite> createState() => _MitarbeiterSeiteState();
 }
 
 class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
-  final TextEditingController _notesController = TextEditingController(
-    text:
-        "Was ist passiert?\nWelche Kunden kamen nicht?\nWas lief gut/schlecht?\nWas soll morgen vorbereitet werden?",
-  );
+  final TextEditingController _notesController = TextEditingController();
 
-  // TODO: später aus Provider/Repository ziehen
+  // ✅ Mock-DATEN ok (aber echte Funktion):
   final List<String> freieSlots = const [
     "08:00 – 08:30",
     "08:30 – 09:00",
@@ -27,50 +39,82 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
     "11:00 – 11:30",
   ];
 
+  String get _notesKey => 'notes_${widget.benutzername.toLowerCase()}';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotes();
+  }
+
+  @override
+  void didUpdateWidget(covariant MitarbeiterSeite oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.benutzername != widget.benutzername) {
+      _loadNotes();
+    }
+  }
+
   @override
   void dispose() {
     _notesController.dispose();
     super.dispose();
   }
 
-  void _saveNotes() {
-    // TODO: später speichern (Provider/DB)
+  Future<void> _loadNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final txt = prefs.getString(_notesKey) ?? "";
+    if (!mounted) return;
+
+    setState(() {
+      _notesController.text = txt.isEmpty
+          ? "Was ist passiert?\nWelche Kunden kamen nicht?\nWas lief gut/schlecht?\nWas soll morgen vorbereitet werden?"
+          : txt;
+    });
+  }
+
+  Future<void> _saveNotes() async {
+    final t = AppLocalizations.of(context)!;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_notesKey, _notesController.text.trim());
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Notizen gespeichert (Mock)")),
+      SnackBar(content: Text(t.saved)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Blaues Panel (bleibt wie bei dir)
     const panelBlue = AppColors.bluePanel;
 
-    // Innenkarten: du wolltest “Rest kann bleiben”
-    final innerCard = Colors.white;
-
-    // Notizen-Feld: in Darkmode darf das NICHT blendend sein
-    final notesFill = isDark ? const Color(0xFF151A21) : const Color(0xFFF6F6F6);
-    final notesText = isDark ? Colors.white : Colors.black;
-    final notesHint = isDark ? Colors.white70 : Colors.black54;
+    final innerCard = isDark ? const Color(0xFF111821) : Colors.white;
+    final notesFill = isDark ? const Color(0xFF141D27) : const Color(0xFFF6F6F6);
+    final text = isDark ? Colors.white : Colors.black;
+    final sub = isDark ? Colors.white70 : Colors.black54;
 
     return AppPage(
-      title: "Mitarbeiter",
+      title: t.employees,
       child: Column(
         children: [
           _UserHeaderCard(
             benutzername: widget.benutzername,
-            onLogout: () {
-              // TODO: dein Logout hier
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Logout (Mock)")),
-              );
-            },
+            subtitle: t.employeesSubtitle,
           ),
           const SizedBox(height: AppGaps.s18),
 
-          // FIX gegen Overflow: Expanded + innen scrollen
+          // ✅ HIER die Hesap Box (nur Admin)
+          AccountPanel(
+            isAdmin: widget.isAdmin,
+            selected: widget.aktiverAccount,
+            onChanged: widget.onAccountChanged,
+          ),
+
+          if (widget.isAdmin) const SizedBox(height: AppGaps.s18),
+
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadii.r22),
@@ -80,11 +124,10 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // LINKS: Freie Zeitfenster
                     Expanded(
                       child: _InnerPanel(
                         background: innerCard,
-                        title: "Freie Zeitfenster heute",
+                        title: t.freeSlotsToday,
                         titleIcon: Icons.timer_outlined,
                         child: ListView.builder(
                           padding: const EdgeInsets.all(16),
@@ -94,26 +137,25 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _SlotTile(
                                 time: freieSlots[i],
-                                statusText: "frei",
+                                statusText: t.booked, // kannst du später anpassen
+                                statusIsFree: true,
+                                isDark: isDark,
                               ),
                             );
                           },
                         ),
                       ),
                     ),
-
                     const SizedBox(width: AppGaps.s18),
-
-                    // RECHTS: Notizen
                     Expanded(
                       child: _InnerPanel(
                         background: innerCard,
-                        title: "Notizen",
+                        title: t.notesTitle,
                         titleIcon: Icons.note_alt_outlined,
                         topRight: ElevatedButton.icon(
                           onPressed: _saveNotes,
                           icon: const Icon(Icons.save_outlined),
-                          label: const Text("Speichern"),
+                          label: Text(t.save),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFFB5A7),
                             foregroundColor: Colors.black,
@@ -130,12 +172,12 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
                             expands: true,
                             maxLines: null,
                             textAlignVertical: TextAlignVertical.top,
-                            style: TextStyle(color: notesText),
+                            style: TextStyle(color: text),
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: notesFill,
-                              hintText: "Notizen…",
-                              hintStyle: TextStyle(color: notesHint),
+                              hintText: t.notesTitle,
+                              hintStyle: TextStyle(color: sub),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
                                 borderSide: BorderSide.none,
@@ -158,18 +200,20 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
 
 class _UserHeaderCard extends StatelessWidget {
   final String benutzername;
-  final VoidCallback onLogout;
+  final String subtitle;
 
   const _UserHeaderCard({
     required this.benutzername,
-    required this.onLogout,
+    required this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = Colors.white;
-    final subtitleColor = isDark ? Colors.black54 : Colors.black54;
+
+    final cardBg = isDark ? const Color(0xFF111821) : Colors.white;
+    final title = isDark ? Colors.white : Colors.black;
+    final sub = isDark ? Colors.white70 : Colors.black54;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.r22),
@@ -190,26 +234,15 @@ class _UserHeaderCard extends StatelessWidget {
                 children: [
                   Text(
                     benutzername,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: title,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    "Intern • Team-Übersicht & Notizen",
-                    style: TextStyle(color: subtitleColor),
-                  ),
+                  Text(subtitle, style: TextStyle(color: sub)),
                 ],
-              ),
-            ),
-            OutlinedButton.icon(
-              onPressed: onLogout,
-              icon: const Icon(Icons.logout),
-              label: const Text("Logout"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.orange,
-                side: const BorderSide(color: AppColors.orange),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.pill),
-                ),
               ),
             ),
           ],
@@ -236,6 +269,10 @@ class _InnerPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final divider = isDark ? Colors.white.withAlpha(18) : Colors.black12;
+    final titleColor = isDark ? Colors.white : Colors.black;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.r18),
       child: Container(
@@ -251,9 +288,10 @@ class _InnerPanel extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
+                        color: titleColor,
                       ),
                     ),
                   ),
@@ -261,7 +299,7 @@ class _InnerPanel extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: divider),
             Expanded(child: child),
           ],
         ),
@@ -273,16 +311,26 @@ class _InnerPanel extends StatelessWidget {
 class _SlotTile extends StatelessWidget {
   final String time;
   final String statusText;
+  final bool statusIsFree;
+  final bool isDark;
 
-  const _SlotTile({required this.time, required this.statusText});
+  const _SlotTile({
+    required this.time,
+    required this.statusText,
+    required this.statusIsFree,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final border = isDark ? Colors.white.withAlpha(20) : Colors.black12;
+    final text = isDark ? Colors.white : Colors.black;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black12),
+        border: Border.all(color: border),
       ),
       child: Row(
         children: [
@@ -298,18 +346,21 @@ class _SlotTile extends StatelessWidget {
           Expanded(
             child: Text(
               time,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: TextStyle(fontWeight: FontWeight.w800, color: text),
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color.fromARGB(15, 0, 0, 0),
+              color: (statusIsFree ? AppColors.orange : Colors.black).withAlpha(isDark ? 28 : 15),
               borderRadius: BorderRadius.circular(AppRadii.pill),
             ),
             child: Text(
-              statusText,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              statusIsFree ? "frei" : statusText,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: text,
+              ),
             ),
           ),
         ],

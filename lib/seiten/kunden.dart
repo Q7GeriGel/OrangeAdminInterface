@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
 import '../widgets/kunden_tabelle.dart';
@@ -95,7 +96,6 @@ class _KundenSeiteState extends State<KundenSeite> {
                 ),
                 TextButton(
                   onPressed: () {
-                    // ✅ schneller Reset
                     setLocalState(() {
                       nurStamm = null;
                       friseur = null;
@@ -164,11 +164,13 @@ class _KundenSeiteState extends State<KundenSeite> {
     return parts.join(' • ');
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
-    const pageBg = Color(0xFFECEDEE);
-    const panelBlau = Color(0xFF355573);
-    const weiss = Colors.white;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final pageBg = isDark ? const Color(0xFF0B0F14) : const Color(0xFFECEDEE);
+    final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
+    final surface = isDark ? const Color(0xFF141D27) : Colors.white;
 
     final activeFilters = _activeFilterText();
 
@@ -181,24 +183,24 @@ class _KundenSeiteState extends State<KundenSeite> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Kunden',
                 style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
+                  color: isDark ? Colors.white : Colors.black,
                 ),
               ),
               const SizedBox(height: 12),
-
               Expanded(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: panelBlau,
+                    color: panel,
                     borderRadius: BorderRadius.circular(22),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(10),
+                        color: Colors.black.withAlpha(isDark ? 40 : 10),
                         blurRadius: 18,
                         offset: const Offset(0, 10),
                       ),
@@ -215,27 +217,24 @@ class _KundenSeiteState extends State<KundenSeite> {
                               child: Container(
                                 height: topHeight,
                                 decoration: BoxDecoration(
-                                  color: weiss,
+                                  color: surface,
                                   borderRadius: BorderRadius.circular(topHeight / 2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withAlpha(14),
-                                      blurRadius: 18,
-                                      offset: const Offset(0, 10),
-                                    ),
-                                  ],
+                                  border: Border.all(
+                                    color: isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(10),
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
                                     const SizedBox(width: 14),
-                                    const Icon(Icons.search, size: 20),
+                                    Icon(Icons.search, size: 20, color: isDark ? Colors.white70 : Colors.black54),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: TextField(
                                         controller: sucheCtrl,
-                                        decoration: const InputDecoration(
-                                          hintText:
-                                              'Suche bei Name, Telefonnummer oder Datum (dd.MM.yyyy)',
+                                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                                        decoration: InputDecoration(
+                                          hintText: 'Suche bei Name, Telefonnummer oder Datum (dd.MM.yyyy)',
+                                          hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black45),
                                           border: InputBorder.none,
                                         ),
                                       ),
@@ -245,28 +244,27 @@ class _KundenSeiteState extends State<KundenSeite> {
                               ),
                             ),
                             const SizedBox(width: 12),
-
                             SizedBox(
                               width: topHeight,
                               height: topHeight,
                               child: ClipOval(
                                 child: Material(
-                                  color: Colors.white.withAlpha(35),
+                                  color: Colors.white.withAlpha(isDark ? 18 : 35),
                                   child: IconButton(
                                     tooltip: 'Filter',
                                     onPressed: _filterDialog,
-                                    icon: const Icon(Icons.tune, color: Colors.white),
+                                    icon: Icon(Icons.tune, color: isDark ? Colors.white : Colors.black),
                                   ),
                                 ),
                               ),
                             ),
-
                             const SizedBox(width: 12),
 
+                            // ✅ Button darf orange sein (wie du willst)
                             FilledButton.icon(
                               onPressed: () => _dialogHinzufuegenBearbeiten(),
                               style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF6E61A8),
+                                backgroundColor: const Color(0xFFCC5C4C),
                                 minimumSize: const Size(0, topHeight),
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                                 shape: const StadiumBorder(),
@@ -293,18 +291,36 @@ class _KundenSeiteState extends State<KundenSeite> {
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: weiss,
+                              color: surface,
                               borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(10),
+                              ),
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(18),
-                              child: KundenTabelle(
-                                kunden: verwaltung.kunden,
-                                datumFmt: datumFmt,
-                                onBearbeiten: (k) => _dialogHinzufuegenBearbeiten(bearbeiten: k),
-                                onLoeschen: (k) => setState(() => verwaltung.loeschen(k.id)),
-                                onTermin: _naechstenTerminWaehlen,
-                                minLinien: 14,
+
+                              // ✅ HIER kommt der Fix für: Refik Erdogan / Nummer etc -> WEISS im Darkmode
+                              child: DataTableTheme(
+                                data: DataTableThemeData(
+                                  dataTextStyle: TextStyle(
+                                    color: isDark ? Colors.white : Colors.black,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  headingTextStyle: TextStyle(
+                                    color: isDark ? Colors.white : Colors.black,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                  dividerThickness: 0.6,
+                                ),
+                                child: KundenTabelle(
+                                  kunden: verwaltung.kunden,
+                                  datumFmt: datumFmt,
+                                  onBearbeiten: (k) => _dialogHinzufuegenBearbeiten(bearbeiten: k),
+                                  onLoeschen: (k) => setState(() => verwaltung.loeschen(k.id)),
+                                  onTermin: _naechstenTerminWaehlen,
+                                  minLinien: 14,
+                                ),
                               ),
                             ),
                           ),

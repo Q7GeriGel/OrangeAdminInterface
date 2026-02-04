@@ -18,17 +18,22 @@ class DashboardPage extends StatelessWidget {
 
   const DashboardPage({super.key, required this.benutzername});
 
-  static const _bg = Color(0xFFF4F4F4);
   static const _orange = Color(0xFFCC5C4C);
   static const _blue = Color(0xFF335776);
   static const _violet = Color(0xFF6E61A8);
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = context.watch<TerminplanController>();
-    final todayText =
-        DateFormat('EEEE, dd.MM.yyyy', 'de_DE').format(DateTime.now());
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
+    final bg = Theme.of(context).scaffoldBackgroundColor;
+    final surface = isDark ? const Color(0xFF111821) : Colors.white;
+    final surface2 = isDark ? const Color(0xFF141D27) : Colors.white;
+    final border = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(18);
+
+    final ctrl = context.watch<TerminplanController>();
+    final todayText = DateFormat('EEEE, dd.MM.yyyy', 'de_DE').format(DateTime.now());
     final messenger = ScaffoldMessenger.of(context);
 
     Future<void> openNewKunde() async {
@@ -52,7 +57,7 @@ class DashboardPage extends StatelessWidget {
     }
 
     return Scaffold(
-      backgroundColor: _bg,
+      backgroundColor: bg,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -62,9 +67,6 @@ class DashboardPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ----------------
-                  // Header / Actions
-                  // ----------------
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -74,17 +76,14 @@ class DashboardPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: surface,
                               borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: Colors.black.withAlpha(18)),
+                              border: Border.all(color: border),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withAlpha(10),
+                                  color: Colors.black.withAlpha(isDark ? 0 : 10),
                                   blurRadius: 14,
                                   offset: const Offset(0, 8),
                                 ),
@@ -97,7 +96,10 @@ class DashboardPage extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 Text(
                                   todayText,
-                                  style: const TextStyle(fontWeight: FontWeight.w800),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    color: scheme.onSurface,
+                                  ),
                                 ),
                               ],
                             ),
@@ -129,7 +131,7 @@ class DashboardPage extends StatelessWidget {
                                     const SnackBar(content: Text('Aktualisiert ✅')),
                                   );
                                 },
-                                icon: const Icon(Icons.refresh),
+                                icon: Icon(Icons.refresh, color: scheme.onSurface),
                               ),
                             ],
                           ),
@@ -143,15 +145,13 @@ class DashboardPage extends StatelessWidget {
                   Text(
                     "Hier ist dein Tagesplan:",
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
+                          color: scheme.onSurface,
                         ),
                   ),
 
                   const SizedBox(height: 14),
 
-                  // ----------------
-                  // KPI GRID (stabil, sauber)
-                  // ----------------
                   LayoutBuilder(
                     builder: (context, c) {
                       final w = c.maxWidth;
@@ -175,6 +175,8 @@ class DashboardPage extends StatelessWidget {
                           SizedBox(
                             width: itemWidth,
                             child: _KpiCard(
+                              bg: surface2,
+                              border: border,
                               icon: Icons.event_available,
                               label: 'Termine heute',
                               value: ctrl.termineHeuteTotal().toString(),
@@ -184,6 +186,8 @@ class DashboardPage extends StatelessWidget {
                           SizedBox(
                             width: itemWidth,
                             child: _KpiCard(
+                              bg: surface2,
+                              border: border,
                               icon: Icons.schedule,
                               label: 'Nächster Termin',
                               value: ctrl.naechsterTerminHeuteLabel(),
@@ -193,6 +197,8 @@ class DashboardPage extends StatelessWidget {
                           SizedBox(
                             width: itemWidth,
                             child: _KpiCard(
+                              bg: surface2,
+                              border: border,
                               icon: Icons.timer,
                               label: 'Freie Slots',
                               value: ctrl.freie.length.toString(),
@@ -202,6 +208,8 @@ class DashboardPage extends StatelessWidget {
                           SizedBox(
                             width: itemWidth,
                             child: _KpiCard(
+                              bg: surface2,
+                              border: border,
                               icon: Icons.sync,
                               label: 'Änderungen',
                               value: ctrl.aenderungen.length.toString(),
@@ -215,9 +223,6 @@ class DashboardPage extends StatelessWidget {
 
                   const SizedBox(height: 18),
 
-                  // ----------------
-                  // DASHBOARD BOX GRID (3 Panels, exakt gleiche Breiten)
-                  // ----------------
                   LayoutBuilder(
                     builder: (context, c) {
                       final w = c.maxWidth;
@@ -263,10 +268,12 @@ class _WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     final baseStyle = Theme.of(context).textTheme.displaySmall?.copyWith(
           fontWeight: FontWeight.w900,
           letterSpacing: -1.0,
-          color: Colors.black,
+          color: scheme.onSurface,
         );
 
     return FittedBox(
@@ -289,12 +296,16 @@ class _WelcomeHeader extends StatelessWidget {
 
 class _KpiCard extends StatelessWidget {
   const _KpiCard({
+    required this.bg,
+    required this.border,
     required this.icon,
     required this.label,
     required this.value,
     required this.accent,
   });
 
+  final Color bg;
+  final Color border;
   final IconData icon;
   final String label;
   final String value;
@@ -302,16 +313,19 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      height: 86, // ✅ gleiche Höhe = geordnet
+      height: 86,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE9E9E9)),
+        border: Border.all(color: border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(10),
+            color: Colors.black.withAlpha(isDark ? 0 : 10),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -339,8 +353,8 @@ class _KpiCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.black.withAlpha(150),
-                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface.withAlpha(170),
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -348,7 +362,11 @@ class _KpiCard extends StatelessWidget {
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                    color: scheme.onSurface,
+                  ),
                 ),
               ],
             ),

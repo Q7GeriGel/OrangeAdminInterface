@@ -568,7 +568,7 @@ class _RightPanel extends StatelessWidget {
       ),
       _MetricTile(
         title: 'Leerlauf heute',
-        value: '${idleMinutes} min',
+        value: '$idleMinutes min',
         subtitle: teamMode ? 'Team' : 'für mich',
         icon: Icons.timer_outlined,
       ),

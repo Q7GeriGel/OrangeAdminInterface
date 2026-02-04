@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../widgets/sidebar.dart';
 import 'auth_gate.dart';
@@ -26,7 +27,31 @@ class Startseite extends StatefulWidget {
 class _StartseiteState extends State<Startseite> {
   int ausgewaehlterIndex = 0;
 
-  void _logout() {
+  // ✅ das ist der "aktive" Mitarbeiter (für Ansicht/Statistik/Notizen etc.)
+  late String _aktiverAccount;
+
+  @override
+  void initState() {
+    super.initState();
+    _aktiverAccount = widget.benutzername;
+  }
+
+  void _setAccount(String name) {
+    setState(() => _aktiverAccount = name);
+  }
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // ✅ safe cleanup (egal welche keys du vorher genutzt hast)
+    await prefs.remove('username');
+    await prefs.remove('benutzername');
+    await prefs.remove('isAdmin');
+    await prefs.remove('loggedIn');
+    await prefs.remove('loggedInUser');
+
+    if (!mounted) return;
+
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthGate()),
       (_) => false,
@@ -41,7 +66,14 @@ class _StartseiteState extends State<Startseite> {
           Sidebar(
             ausgewaehlterIndex: ausgewaehlterIndex,
             beimAuswaehlen: (index) => setState(() => ausgewaehlterIndex = index),
-            onLogout: _logout, // ✅ echter Logout
+
+            // ✅ für Hesap / Toggle
+            isAdmin: widget.isAdmin,
+            aktiverAccount: _aktiverAccount,
+            onAccountChanged: _setAccount,
+
+            // ✅ Logout wieder da + echt
+            onLogout: _logout,
           ),
           Expanded(
             child: AnimatedSwitcher(
@@ -73,20 +105,32 @@ class _StartseiteState extends State<Startseite> {
   Widget _seiteFuerIndex(int index) {
     switch (index) {
       case 0:
-        return DashboardPage(benutzername: widget.benutzername);
+        return DashboardPage(benutzername: _aktiverAccount);
+
       case 1:
         return const KundenSeite();
+
       case 2:
-        return MitarbeiterSeite(benutzername: widget.benutzername);
+        return MitarbeiterSeite(
+          benutzername: _aktiverAccount,
+          isAdmin: widget.isAdmin,
+          aktiverAccount: _aktiverAccount,
+          onAccountChanged: _setAccount,
+        );
+
       case 3:
+        // ✅ HIER war dein Fehler -> jetzt wird isAdmin übergeben
         return TermineWochenansicht(isAdmin: widget.isAdmin);
+
       case 4:
         return StatistikSeite(
-          angemeldeterName: widget.benutzername,
+          angemeldeterName: _aktiverAccount,
           isAdmin: widget.isAdmin,
         );
+
       case 5:
         return const EinstellungSeite();
+
       default:
         return const Center(child: Text("Unbekannt"));
     }
