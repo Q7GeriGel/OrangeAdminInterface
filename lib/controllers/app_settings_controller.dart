@@ -5,8 +5,8 @@ class AppSettingsController extends ChangeNotifier {
   static const _kThemeMode = 'themeMode';
   static const _kLocale = 'locale';
 
-  ThemeMode _themeMode = ThemeMode.dark; // default: dark, weil du willst
-  Locale _locale = const Locale('tr', 'TR'); // default: Türkisch
+  ThemeMode _themeMode = ThemeMode.dark;
+  Locale _locale = const Locale('tr');
 
   ThemeMode get themeMode => _themeMode;
   Locale get locale => _locale;
@@ -27,10 +27,10 @@ class AppSettingsController extends ChangeNotifier {
     }
 
     if (localeRaw != null) {
-      // format: tr_TR / de_DE
-      final parts = localeRaw.split('_');
-      if (parts.length == 2) {
-        _locale = Locale(parts[0], parts[1]);
+      if (localeRaw.contains('_')) {
+        _locale = Locale(localeRaw.split('_').first);
+      } else {
+        _locale = Locale(localeRaw);
       }
     }
 
@@ -56,8 +56,8 @@ class AppSettingsController extends ChangeNotifier {
     }
 
     if (locale != null) {
-      _locale = locale;
-      await prefs.setString(_kLocale, '${locale.languageCode}_${locale.countryCode}');
+      _locale = Locale(locale.languageCode);
+      await prefs.setString(_kLocale, locale.languageCode);
     }
 
     notifyListeners();

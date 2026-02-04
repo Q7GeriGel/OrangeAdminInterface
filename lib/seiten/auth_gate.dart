@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
+
 import 'startseite.dart';
 
 class AuthGate extends StatefulWidget {
@@ -9,185 +11,208 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
-  // Fake-"Datenbank" im Speicher – KEY = Benutzername
-  final Map<String, String> _users = {
-    'admin': '123456', // Testuser: Benutzername = admin, Passwort = 123456
+  final _userCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+
+  bool _loading = false;
+
+  /// username (immer klein) -> userinfo
+  final Map<String, _UserInfo> _users = {
+    'serkan': const _UserInfo(password: '123', isAdmin: false, displayName: 'serkan'),
+    'sedat': const _UserInfo(password: '123', isAdmin: true, displayName: 'sedat'),
+    'samet': const _UserInfo(password: '123', isAdmin: false, displayName: 'samet'),
   };
 
-  bool _isLogin = true; // true = Login, false = Registrieren
+  @override
+  void dispose() {
+    _userCtrl.dispose();
+    _passCtrl.dispose();
+    super.dispose();
+  }
 
-  final _benutzernameCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-
-  String? _infoText;           // <-- gemeinsame Message (Fehler ODER Erfolg)
-  bool _infoIsError = false;   // <-- steuert die Farbe
-
-  void _submit() {
-    final benutzername = _benutzernameCtrl.text.trim();
-    final password = _passwordCtrl.text;
-
-    if (benutzername.isEmpty || password.isEmpty) {
-      setState(() {
-        _infoText = 'Bitte Benutzername und Passwort eingeben.';
-        _infoIsError = true;
-      });
-      return;
-    }
-
-    if (_isLogin) {
-      _handleLogin(benutzername, password);
-    } else {
-      _handleRegister(benutzername, password);
+  String _t(AppLocalizations? l10n, String fallback, String Function(AppLocalizations l) pick) {
+    // falls ARB-Keys noch fehlen -> fallback nutzen
+    if (l10n == null) return fallback;
+    try {
+      return pick(l10n);
+    } catch (_) {
+      return fallback;
     }
   }
 
-  void _handleLogin(String benutzername, String password) {
-    final savedPw = _users[benutzername];
+  Future<void> _login() async {
+    final l10n = AppLocalizations.of(context);
 
-    if (savedPw == null || savedPw != password) {
-      setState(() {
-        _infoText = 'Falscher Benutzername oder falsches Passwort.';
-        _infoIsError = true;
-      });
+    final username = _userCtrl.text.trim().toLowerCase();
+    final password = _passCtrl.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _t(l10n, 'Bitte Benutzername und Passwort eingeben.', (l) => l.emptyCredentials),
+          ),
+        ),
+      );
       return;
     }
 
-    // ✅ Erfolg → weiter in Startseite (Sidebar + Dashboard)
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => Startseite(benutzername: benutzername),
-      ),
-    );
-  }
+    setState(() => _loading = true);
 
-  void _handleRegister(String benutzername, String password) {
-    if (_users.containsKey(benutzername)) {
-      setState(() {
-        _infoText = 'Dieser Benutzername ist bereits vergeben.';
-        _infoIsError = true;
-      });
-      return;
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      final info = _users[username];
+
+      if (info == null || info.password != password) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _t(l10n, 'Falsche Zugangsdaten.', (l) => l.wrongCredentials),
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+
+      // ✅ KEIN isAdmin übergeben -> keine Fehler mehr in Startseite
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => Startseite(benutzername: info.displayName),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-
-    // "Speichern" in der Fake-Map
-    _users[benutzername] = password;
-
-    // TODO: später hier echten API-Call / DB-Speicherung einbauen
-
-    // ✅ Erfolgs-Message in GRÜN anzeigen + auf Login wechseln
-    setState(() {
-      _isLogin = true;
-      _infoText = 'Registrierung erfolgreich. Du kannst dich jetzt einloggen.';
-      _infoIsError = false; // <-- wichtig: Erfolg = nicht rot
-      _passwordCtrl.clear();
-    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    final title = _t(l10n, 'Friseur Orange', (l) => l.appTitle);
+    final usernameText = _t(l10n, 'Benutzername', (l) => l.username);
+    final passwordText = _t(l10n, 'Passwort', (l) => l.password);
+    final signInText = _t(l10n, 'Einloggen', (l) => l.signIn);
+
     return Scaffold(
+      backgroundColor: const Color(0xFF0B0E14),
       body: Center(
-        child: SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Card(
-              elevation: 10,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Friseur Orange Admin',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _isLogin
-                          ? 'Melde dich an, um fortzufahren.'
-                          : 'Erstelle einen neuen Account.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Login / Registrieren Switch
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ChoiceChip(
-                          label: const Text('Login'),
-                          selected: _isLogin,
-                          onSelected: (_) => setState(() {
-                            _isLogin = true;
-                            _infoText = null;
-                          }),
-                        ),
-                        const SizedBox(width: 8),
-                        ChoiceChip(
-                          label: const Text('Registrieren'),
-                          selected: !_isLogin,
-                          onSelected: (_) => setState(() {
-                            _isLogin = false;
-                            _infoText = null;
-                          }),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    TextField(
-                      controller: _benutzernameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Benutzername',
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _passwordCtrl,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Passwort',
-                        prefixIcon: Icon(Icons.lock_outline),
-                      ),
-                    ),
-
-                    if (_infoText != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        _infoText!,
-                        style: TextStyle(
-                          color: _infoIsError ? Colors.red : Colors.green,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 20),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: _submit,
-                        child: Text(_isLogin ? 'Anmelden' : 'Registrieren'),
-                      ),
-                    ),
-
-                    // Kein "Noch kein Account..."-Button mehr
-                  ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            margin: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFF121826),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white12),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromARGB(60, 0, 0, 0),
+                  blurRadius: 18,
+                  offset: Offset(0, 10),
                 ),
-              ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 22,
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                TextField(
+                  controller: _userCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: usernameText,
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    filled: true,
+                    fillColor: const Color(0xFF0F131B),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                TextField(
+                  controller: _passCtrl,
+                  obscureText: true,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: passwordText,
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    filled: true,
+                    fillColor: const Color(0xFF0F131B),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFC95B4C),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            signInText,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  'Zulässige Accounts: serkan / sedat / samet (Passwort: 123)',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _UserInfo {
+  final String password;
+  final bool isAdmin; // für später (Rechte)
+  final String displayName;
+
+  const _UserInfo({
+    required this.password,
+    required this.isAdmin,
+    required this.displayName,
+  });
 }
