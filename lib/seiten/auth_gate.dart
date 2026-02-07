@@ -16,6 +16,7 @@ class _AuthGateState extends State<AuthGate> {
 
   bool _loading = false;
 
+  // ✅ Mock-User
   final Map<String, _UserInfo> _users = {
     'serkan': const _UserInfo(password: '123', isAdmin: false, displayName: 'serkan'),
     'sedat': const _UserInfo(password: '123', isAdmin: true, displayName: 'sedat'),
@@ -29,26 +30,15 @@ class _AuthGateState extends State<AuthGate> {
     super.dispose();
   }
 
-  String _t(AppLocalizations? l10n, String fallback, String Function(AppLocalizations l) pick) {
-    if (l10n == null) return fallback;
-    try {
-      return pick(l10n);
-    } catch (_) {
-      return fallback;
-    }
-  }
-
   Future<void> _login() async {
-    final l10n = AppLocalizations.of(context);
+    final t = AppLocalizations.of(context)!;
 
     final username = _userCtrl.text.trim().toLowerCase();
     final password = _passCtrl.text;
 
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_t(l10n, 'Bitte Benutzername und Passwort eingeben.', (l) => l.emptyCredentials)),
-        ),
+        SnackBar(content: Text(t.emptyCredentials)),
       );
       return;
     }
@@ -61,10 +51,9 @@ class _AuthGateState extends State<AuthGate> {
       final info = _users[username];
 
       if (info == null || info.password != password) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_t(l10n, 'Falsche Zugangsdaten.', (l) => l.wrongCredentials)),
-          ),
+          SnackBar(content: Text(t.wrongCredentials)),
         );
         return;
       }
@@ -75,7 +64,7 @@ class _AuthGateState extends State<AuthGate> {
         MaterialPageRoute(
           builder: (_) => Startseite(
             benutzername: info.displayName,
-            isAdmin: info.isAdmin, // ✅ Admin kommt an
+            isAdmin: info.isAdmin,
           ),
         ),
       );
@@ -86,12 +75,7 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    final title = _t(l10n, 'Friseur Orange', (l) => l.appTitle);
-    final usernameText = _t(l10n, 'Benutzername', (l) => l.username);
-    final passwordText = _t(l10n, 'Passwort', (l) => l.password);
-    final signInText = _t(l10n, 'Einloggen', (l) => l.signIn);
+    final t = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B0E14),
@@ -117,7 +101,7 @@ class _AuthGateState extends State<AuthGate> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  title,
+                  t.appTitle,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
@@ -125,11 +109,13 @@ class _AuthGateState extends State<AuthGate> {
                   ),
                 ),
                 const SizedBox(height: 14),
+
                 TextField(
                   controller: _userCtrl,
+                  onSubmitted: (_) => _login(),
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    labelText: usernameText,
+                    labelText: t.username,
                     labelStyle: const TextStyle(color: Colors.white70),
                     filled: true,
                     fillColor: const Color(0xFF0F131B),
@@ -139,13 +125,16 @@ class _AuthGateState extends State<AuthGate> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 10),
+
                 TextField(
                   controller: _passCtrl,
                   obscureText: true,
+                  onSubmitted: (_) => _login(),
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    labelText: passwordText,
+                    labelText: t.password,
                     labelStyle: const TextStyle(color: Colors.white70),
                     filled: true,
                     fillColor: const Color(0xFF0F131B),
@@ -155,7 +144,9 @@ class _AuthGateState extends State<AuthGate> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 14),
+
                 SizedBox(
                   width: double.infinity,
                   height: 46,
@@ -174,13 +165,19 @@ class _AuthGateState extends State<AuthGate> {
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : Text(signInText, style: const TextStyle(fontWeight: FontWeight.w900)),
+                        : Text(
+                            t.signIn,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
                   ),
                 ),
+
                 const SizedBox(height: 10),
-                const Text(
-                  'Zulässige Accounts: serkan / sedat / samet (Passwort: 123)',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
+
+                Text(
+                  t.allowedAccountsHint,
+                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),

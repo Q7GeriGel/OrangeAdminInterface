@@ -12,11 +12,16 @@ import '../widgets/kalender/termin_create_dialog.dart';
 
 class TermineWochenansicht extends StatelessWidget {
   final bool isAdmin;
+  final String sichtMitarbeiterName;
 
   const TermineWochenansicht({
     super.key,
     required this.isAdmin,
+    required this.sichtMitarbeiterName,
   });
+
+  bool _sameName(String a, String b) =>
+      a.trim().toLowerCase() == b.trim().toLowerCase();
 
   void _noPerm(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -35,6 +40,10 @@ class TermineWochenansicht extends StatelessWidget {
     final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
     final inner = isDark ? const Color(0xFF141D27) : Colors.white;
 
+    final filtered = ctrl.termine
+        .where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName))
+        .toList();
+
     return Scaffold(
       backgroundColor: pageBg,
       body: SafeArea(
@@ -47,11 +56,13 @@ class TermineWochenansicht extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      l.appointmentsOverview,
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                      '${l.appointmentsOverview} • $sichtMitarbeiterName',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
-
                   OutlinedButton.icon(
                     onPressed: isAdmin
                         ? () => openCreateTerminFlow(context: context, ctrl: ctrl)
@@ -59,9 +70,7 @@ class TermineWochenansicht extends StatelessWidget {
                     icon: const Icon(Icons.add),
                     label: Text(l.newAppointment),
                   ),
-
                   const SizedBox(width: 12),
-
                   WeeklyHeader(
                     monday: ctrl.currentWeekMonday,
                     onPrev: ctrl.prevWeek,
@@ -71,7 +80,6 @@ class TermineWochenansicht extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-
               Expanded(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -88,10 +96,9 @@ class TermineWochenansicht extends StatelessWidget {
                             ? const Center(child: CircularProgressIndicator())
                             : WeeklyGrid(
                                 monday: ctrl.currentWeekMonday,
-                                appointments: ctrl.termine,
+                                appointments: filtered,
                                 startHour: 8,
                                 endHour: 20,
-
                                 onTapEmptySlot: (slot) => isAdmin
                                     ? openCreateTerminFlow(
                                         context: context,
@@ -99,7 +106,6 @@ class TermineWochenansicht extends StatelessWidget {
                                         presetStart: slot,
                                       )
                                     : _noPerm(context),
-
                                 onDoubleTapTermin: (Termin t) async {
                                   await showTerminDetailsDialog(
                                     context: context,
@@ -115,7 +121,8 @@ class TermineWochenansicht extends StatelessWidget {
                                       );
                                       ctrl.moveTermin(t.id, newStart);
                                     },
-                                    onChangeDuration: (minutes) => ctrl.updateDuration(t.id, minutes),
+                                    onChangeDuration: (minutes) =>
+                                        ctrl.updateDuration(t.id, minutes),
                                     onToggleStatus: () => ctrl.toggleStatus(t.id),
                                     onCancel: () => ctrl.cancelTermin(t.id),
                                     onDelete: () => ctrl.deleteTermin(t.id),

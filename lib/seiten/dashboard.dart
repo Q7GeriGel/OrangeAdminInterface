@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
+
 import '../controllers/terminplan_controller.dart';
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
@@ -24,6 +26,8 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
 
@@ -33,8 +37,11 @@ class DashboardPage extends StatelessWidget {
     final border = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(18);
 
     final ctrl = context.watch<TerminplanController>();
-    final todayText = DateFormat('EEEE, dd.MM.yyyy', 'de_DE').format(DateTime.now());
     final messenger = ScaffoldMessenger.of(context);
+
+    // ✅ Locale sauber (statt fix 'de_DE')
+    final locale = Localizations.localeOf(context).toString();
+    final todayText = DateFormat('EEEE, dd.MM.yyyy', locale).format(DateTime.now());
 
     Future<void> openNewKunde() async {
       final verwaltung = context.read<KundenVerwaltung>();
@@ -52,7 +59,7 @@ class DashboardPage extends StatelessWidget {
 
       verwaltung.hinzufuegen(res);
       messenger.showSnackBar(
-        SnackBar(content: Text('Kunde erstellt: ${res.name}')),
+        SnackBar(content: Text('${t.customerCreated} ${res.name}')),
       );
     }
 
@@ -92,7 +99,7 @@ class DashboardPage extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.today, size: 18, color: _orange),
+                                const Icon(Icons.today, size: 18, color: _orange),
                                 const SizedBox(width: 8),
                                 Text(
                                   todayText,
@@ -116,19 +123,19 @@ class DashboardPage extends StatelessWidget {
                                   ctrl: ctrl,
                                 ),
                                 icon: const Icon(Icons.add),
-                                label: const Text('Neuer Termin'),
+                                label: Text(t.newAppointment),
                               ),
                               FilledButton.icon(
                                 onPressed: openNewKunde,
                                 icon: const Icon(Icons.person_add),
-                                label: const Text('Neuer Kunde'),
+                                label: Text(t.newCustomer),
                               ),
                               IconButton(
-                                tooltip: 'Heute aktualisieren',
+                                tooltip: t.refreshToday,
                                 onPressed: () {
                                   ctrl.goToday();
                                   messenger.showSnackBar(
-                                    const SnackBar(content: Text('Aktualisiert ✅')),
+                                    SnackBar(content: Text(t.refreshed)),
                                   );
                                 },
                                 icon: Icon(Icons.refresh, color: scheme.onSurface),
@@ -143,7 +150,7 @@ class DashboardPage extends StatelessWidget {
                   const SizedBox(height: 6),
 
                   Text(
-                    "Hier ist dein Tagesplan:",
+                    t.dailyPlan,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w900,
                           color: scheme.onSurface,
@@ -178,7 +185,7 @@ class DashboardPage extends StatelessWidget {
                               bg: surface2,
                               border: border,
                               icon: Icons.event_available,
-                              label: 'Termine heute',
+                              label: t.kpiAppointmentsToday,
                               value: ctrl.termineHeuteTotal().toString(),
                               accent: _orange,
                             ),
@@ -189,7 +196,7 @@ class DashboardPage extends StatelessWidget {
                               bg: surface2,
                               border: border,
                               icon: Icons.schedule,
-                              label: 'Nächster Termin',
+                              label: t.kpiNextAppointment,
                               value: ctrl.naechsterTerminHeuteLabel(),
                               accent: _blue,
                             ),
@@ -200,7 +207,7 @@ class DashboardPage extends StatelessWidget {
                               bg: surface2,
                               border: border,
                               icon: Icons.timer,
-                              label: 'Freie Slots',
+                              label: t.kpiFreeSlots,
                               value: ctrl.freie.length.toString(),
                               accent: _violet,
                             ),
@@ -211,7 +218,7 @@ class DashboardPage extends StatelessWidget {
                               bg: surface2,
                               border: border,
                               icon: Icons.sync,
-                              label: 'Änderungen',
+                              label: t.kpiChanges,
                               value: ctrl.aenderungen.length.toString(),
                               accent: const Color(0xFF2E7DDB),
                             ),
@@ -268,6 +275,7 @@ class _WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
     final baseStyle = Theme.of(context).textTheme.displaySmall?.copyWith(
@@ -282,10 +290,10 @@ class _WelcomeHeader extends StatelessWidget {
       child: RichText(
         text: TextSpan(
           children: [
-            TextSpan(text: "Willkommen", style: baseStyle),
+            TextSpan(text: t.welcome, style: baseStyle),
             TextSpan(
-              text: ", $benutzername!",
-              style: baseStyle?.copyWith(color: const Color(0xFFcc5c4c)),
+              text: ', $benutzername!',
+              style: baseStyle?.copyWith(color: const Color(0xFFCC5C4C)),
             ),
           ],
         ),

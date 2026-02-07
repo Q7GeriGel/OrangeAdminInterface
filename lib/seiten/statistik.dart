@@ -1,3 +1,4 @@
+// (zu lang für 1 Chat-Nachricht? Nein – ich gebe dir trotzdem FULL FILE)
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
@@ -20,10 +21,7 @@ class StatistikSeite extends StatefulWidget {
 }
 
 class _StatistikSeiteState extends State<StatistikSeite> {
-  bool _teamView = false; // ✅ Admin Toggle
-
-  static const _orange = Color(0xFFCC5C4C);
-  static const _blue = Color(0xFF2E7DDB);
+  bool _teamView = false;
 
   bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
@@ -73,7 +71,7 @@ class _StatistikSeiteState extends State<StatistikSeite> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final t = AppLocalizations.of(context)!;
     final ctrl = context.watch<TerminplanController>();
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -90,20 +88,20 @@ class _StatistikSeiteState extends State<StatistikSeite> {
     final days = List.generate(6, (i) => DateTime(monday.year, monday.month, monday.day + i));
 
     final List<double> revByDay = days.map((d) {
-      final list = scope.where((t) => _sameDay(t.start, d) && t.status != Termin.statusAbgesagt).toList();
-      return list.fold<double>(0, (sum, t) {
-        final m = t.end.difference(t.start).inMinutes;
-        return sum + (t.price ?? _mockPriceForMinutes(m));
+      final list = scope.where((x) => _sameDay(x.start, d) && x.status != Termin.statusAbgesagt).toList();
+      return list.fold<double>(0, (sum, x) {
+        final m = x.end.difference(x.start).inMinutes;
+        return sum + (x.price ?? _mockPriceForMinutes(m));
       });
     }).toList();
 
     final weekRevenue = revByDay.fold<double>(0, (a, b) => a + b);
 
     final today = DateTime.now();
-    final todayList = scope.where((t) => _sameDay(t.start, today) && t.status != Termin.statusAbgesagt).toList();
-    final todayRevenue = todayList.fold<double>(0, (sum, t) {
-      final m = t.end.difference(t.start).inMinutes;
-      return sum + (t.price ?? _mockPriceForMinutes(m));
+    final todayList = scope.where((x) => _sameDay(x.start, today) && x.status != Termin.statusAbgesagt).toList();
+    final todayRevenue = todayList.fold<double>(0, (sum, x) {
+      final m = x.end.difference(x.start).inMinutes;
+      return sum + (x.price ?? _mockPriceForMinutes(m));
     });
 
     const totalSlots = 24; // 08:00–20:00 in 30min
@@ -117,6 +115,7 @@ class _StatistikSeiteState extends State<StatistikSeite> {
       final wide = maxW >= 1100;
 
       final left = _LeftPanel(
+        t: t,
         isDark: isDark,
         cardBg: cardBg,
         border: border,
@@ -125,10 +124,11 @@ class _StatistikSeiteState extends State<StatistikSeite> {
         revByDay: revByDay,
         days: days,
         scopeTermine: scope,
-        headlineName: widget.isAdmin && _teamView ? 'Team' : widget.angemeldeterName,
+        headlineName: widget.isAdmin && _teamView ? t.team : widget.angemeldeterName,
       );
 
       final right = _RightPanel(
+        t: t,
         isDark: isDark,
         cardBg: cardBg,
         border: border,
@@ -176,14 +176,13 @@ class _StatistikSeiteState extends State<StatistikSeite> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _TopBar(
-                    title: l10n?.statistics ?? 'Statistik',
+                    t: t,
+                    title: t.statisticsTitle,
                     name: widget.angemeldeterName,
                     isAdmin: widget.isAdmin,
                     isDark: isDark,
                     teamValue: _teamView,
-                    onTeamChanged: widget.isAdmin
-                        ? (v) => setState(() => _teamView = v)
-                        : null,
+                    onTeamChanged: widget.isAdmin ? (v) => setState(() => _teamView = v) : null,
                   ),
                   const SizedBox(height: 14),
                   Expanded(
@@ -202,6 +201,7 @@ class _StatistikSeiteState extends State<StatistikSeite> {
 }
 
 class _TopBar extends StatelessWidget {
+  final AppLocalizations t;
   final String title;
   final String name;
   final bool isAdmin;
@@ -211,6 +211,7 @@ class _TopBar extends StatelessWidget {
   final ValueChanged<bool>? onTeamChanged;
 
   const _TopBar({
+    required this.t,
     required this.title,
     required this.name,
     required this.isAdmin,
@@ -235,7 +236,6 @@ class _TopBar extends StatelessWidget {
             ),
           ),
         ),
-
         if (onTeamChanged != null) ...[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -247,7 +247,7 @@ class _TopBar extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  teamValue ? 'Team' : 'Nur ich',
+                  teamValue ? t.team : t.onlyMe,
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     color: isDark ? Colors.white : Colors.black,
@@ -263,7 +263,6 @@ class _TopBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
         ],
-
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
@@ -280,7 +279,7 @@ class _TopBar extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '$name${isAdmin ? ' (Admin)' : ''}',
+                '$name${isAdmin ? ' (${t.roleAdmin})' : ''}',
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
                   color: isDark ? Colors.white : Colors.black,
@@ -295,6 +294,7 @@ class _TopBar extends StatelessWidget {
 }
 
 class _LeftPanel extends StatelessWidget {
+  final AppLocalizations t;
   final bool isDark;
   final Color cardBg;
   final Color border;
@@ -307,6 +307,7 @@ class _LeftPanel extends StatelessWidget {
   final String headlineName;
 
   const _LeftPanel({
+    required this.t,
     required this.isDark,
     required this.cardBg,
     required this.border,
@@ -318,11 +319,8 @@ class _LeftPanel extends StatelessWidget {
     required this.headlineName,
   });
 
-  bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
   bool _busyAt(DateTime slotStart, DateTime slotEnd) {
-    return scopeTermine.any((t) => t.start.isBefore(slotEnd) && t.end.isAfter(slotStart) && t.status != Termin.statusAbgesagt);
+    return scopeTermine.any((x) => x.start.isBefore(slotEnd) && x.end.isAfter(slotStart) && x.status != Termin.statusAbgesagt);
   }
 
   @override
@@ -337,6 +335,8 @@ class _LeftPanel extends StatelessWidget {
 
     final barColor = const Color(0xFFCC5C4C).withOpacity(isDark ? 0.92 : 0.95);
 
+    final dayLabels = [t.monShort, t.tueShort, t.wedShort, t.thuShort, t.friShort, t.satShort];
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -348,12 +348,11 @@ class _LeftPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Umsatz-Verlauf (Woche)',
+            t.revenueTrendWeekTitle,
             style: TextStyle(fontWeight: FontWeight.w900, color: textMain, fontSize: 16),
           ),
           const SizedBox(height: 10),
 
-          // ✅ kompakter, kein Overflow, weniger whitespace
           SizedBox(
             height: 150,
             child: Row(
@@ -362,7 +361,6 @@ class _LeftPanel extends StatelessWidget {
                 final v = revByDay[i];
                 final h = (maxRev <= 0) ? 0.0 : (v / maxRev);
                 final barH = (h * 100).clamp(0.0, 100.0);
-                final label = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'][i];
 
                 return Expanded(
                   child: Padding(
@@ -379,7 +377,7 @@ class _LeftPanel extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          label,
+                          dayLabels[i],
                           style: TextStyle(color: textSub, fontWeight: FontWeight.w800),
                         ),
                       ],
@@ -395,20 +393,19 @@ class _LeftPanel extends StatelessWidget {
           const SizedBox(height: 14),
 
           Text(
-            'Leerlauf-Heatmap (pro Tag/Zeitslot)',
+            t.idleHeatmapTitle,
             style: TextStyle(fontWeight: FontWeight.w900, color: textMain, fontSize: 16),
           ),
           const SizedBox(height: 6),
-          Text('Für: $headlineName', style: TextStyle(color: textSub, fontWeight: FontWeight.w700)),
+          Text('${t.idleHeatmapFor} $headlineName', style: TextStyle(color: textSub, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
 
-          // ✅ Legende (keine “grauen Blöcke” mehr unklar)
           Wrap(
             spacing: 12,
             runSpacing: 8,
             children: [
-              _LegendDot(label: 'Leerlauf (frei)', color: const Color(0xFFCC5C4C).withOpacity(0.8), textColor: textSub),
-              _LegendDot(label: 'Belegt', color: const Color(0xFF2E7DDB).withOpacity(0.8), textColor: textSub),
+              _LegendDot(label: t.legendIdle, color: const Color(0xFFCC5C4C).withOpacity(0.8), textColor: textSub),
+              _LegendDot(label: t.legendBooked, color: const Color(0xFF2E7DDB).withOpacity(0.8), textColor: textSub),
             ],
           ),
           const SizedBox(height: 12),
@@ -429,7 +426,7 @@ class _LeftPanel extends StatelessWidget {
                     children: [
                       const SizedBox(width: 58),
                       ...List.generate(6, (i) {
-                        final txt = ['Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'][i];
+                        final txt = dayLabels[i];
                         return SizedBox(
                           width: 44,
                           child: Center(
@@ -517,6 +514,7 @@ class _LegendDot extends StatelessWidget {
 }
 
 class _RightPanel extends StatelessWidget {
+  final AppLocalizations t;
   final bool isDark;
   final Color cardBg;
   final Color border;
@@ -535,6 +533,7 @@ class _RightPanel extends StatelessWidget {
   final bool teamMode;
 
   const _RightPanel({
+    required this.t,
     required this.isDark,
     required this.cardBg,
     required this.border,
@@ -557,25 +556,25 @@ class _RightPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final tiles = [
       _MetricTile(
-        title: 'Gesamtumsatz (Woche)',
+        title: t.metricWeekRevenue,
         value: euro(weekRevenue),
         icon: Icons.payments_outlined,
       ),
       _MetricTile(
-        title: 'Umsatz heute',
+        title: t.metricTodayRevenue,
         value: euro(todayRevenue),
         icon: Icons.calendar_today_outlined,
       ),
       _MetricTile(
-        title: 'Leerlauf heute',
+        title: t.metricIdleToday,
         value: '$idleMinutes min',
-        subtitle: teamMode ? 'Team' : 'für mich',
+        subtitle: teamMode ? t.forTeam : t.forMe,
         icon: Icons.timer_outlined,
       ),
       _MetricTile(
-        title: 'Auslastung heute',
+        title: t.metricUtilToday,
         value: '$occupancyPct%',
-        subtitle: '$busySlots/$totalSlots Slots',
+        subtitle: '$busySlots/$totalSlots',
         icon: Icons.pie_chart_outline,
       ),
     ];
@@ -590,14 +589,14 @@ class _RightPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ...tiles.map((t) => Padding(padding: const EdgeInsets.only(bottom: 12), child: t)),
+          ...tiles.map((x) => Padding(padding: const EdgeInsets.only(bottom: 12), child: x)),
 
           const SizedBox(height: 8),
           Divider(color: isDark ? Colors.white10 : Colors.black12),
           const SizedBox(height: 10),
 
           Text(
-            'Freie Slots heute (Top)',
+            t.freeSlotsTop,
             style: TextStyle(color: textMain, fontWeight: FontWeight.w900, fontSize: 16),
           ),
           const SizedBox(height: 10),
@@ -628,9 +627,9 @@ class _RightPanel extends StatelessWidget {
                         color: const Color(0xFFCC5C4C).withOpacity(0.75),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Text(
-                        'frei',
-                        style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white),
+                      child: Text(
+                        t.free,
+                        style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white),
                       ),
                     ),
                   ],
@@ -644,12 +643,12 @@ class _RightPanel extends StatelessWidget {
             Divider(color: isDark ? Colors.white10 : Colors.black12),
             const SizedBox(height: 10),
             Text(
-              'Admin-Tools (später)',
+              t.adminToolsLater,
               style: TextStyle(color: textMain, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
             Text(
-              'Export / erweiterte Filter / Team-Auswertungen',
+              t.adminToolsDesc,
               style: TextStyle(color: textSub, fontWeight: FontWeight.w700),
             ),
           ],

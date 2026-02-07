@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../controllers/terminplan_controller.dart';
+import '../l10n/gen/app_localizations.dart';
 import 'box_shared.dart';
 
 class BoxFreieZeitfenster extends StatefulWidget {
@@ -23,26 +24,26 @@ class _BoxFreieZeitfensterState extends State<BoxFreieZeitfenster> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final p = context.watch<TerminplanController>();
 
-    // ✅ statt DashboardUi.panelBlue -> Theme Secondary (bei dir blau)
     final accentBlue = Theme.of(context).colorScheme.secondary;
 
     final entries = p.freie.map((f) {
       return DashboardEntry(
         f.beschriftung,
         accent: accentBlue,
-        trailing: const DashboardPill(text: 'frei'),
+        trailing: DashboardPill(text: t.free),
       );
     }).toList();
 
     return DashboardBox(
       icon: Icons.timer,
-      titel: 'Freie Zeitfenster heute',
+      titel: t.boxFreeSlotsTodayTitle,
       eintraege: entries,
       height: 360,
-      loading: p.lade, // lass ich wie bei dir (Controller-Property)
-      emptyText: 'Heute keine freien Slots',
+      loading: p.lade,
+      emptyText: t.boxFreeSlotsTodayEmpty,
     );
   }
 }

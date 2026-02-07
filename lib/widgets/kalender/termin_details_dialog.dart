@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../models/termin.dart';
+import '../../l10n/gen/app_localizations.dart';
 
 Future<void> showTerminDetailsDialog({
   required BuildContext context,
@@ -10,7 +12,7 @@ Future<void> showTerminDetailsDialog({
   required VoidCallback onToggleStatus,
   required VoidCallback onCancel,
   required VoidCallback onDelete,
-  bool canEdit = true, // ✅ NEU
+  bool canEdit = true,
 }) {
   return showDialog(
     context: context,
@@ -45,31 +47,39 @@ class _TerminDetailsDialog extends StatelessWidget {
     required this.canEdit,
   });
 
+  String _statusLabel(AppLocalizations t, String status) {
+    if (status == Termin.statusBestaetigt) return t.statusConfirmed;
+    if (status == Termin.statusAbgesagt) return t.statusCancelled;
+    return t.statusOpen;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final startTxt = DateFormat('dd.MM.yyyy • HH:mm').format(termin.start);
     final endTxt = DateFormat('HH:mm').format(termin.end);
     final minutes = termin.end.difference(termin.start).inMinutes;
 
     return AlertDialog(
-      title: const Text('Termin Details'),
+      title: Text(t.appointmentDetailsTitle),
       content: SizedBox(
         width: 520,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _row('Kunde', termin.kundeName),
-            _row('Mitarbeiter', termin.mitarbeiterName),
-            _row('Zeit', '$startTxt – $endTxt ($minutes min)'),
-            _row('Status', termin.status),
-            if (termin.service != null) _row('Service', termin.service!),
-            if (termin.price != null) _row('Preis', '€ ${termin.price!.toStringAsFixed(0)}'),
+            _row(t.customerName, termin.kundeName),
+            _row(t.employee, termin.mitarbeiterName),
+            _row(t.startTime, '$startTxt – $endTxt ($minutes ${t.minutesShort})'),
+            _row(t.status, _statusLabel(t, termin.status)),
+            if (termin.service != null) _row('Service', termin.service!), // optional, wenn du willst -> später l10n key
+            if (termin.price != null) _row('Preis', '€ ${termin.price!.toStringAsFixed(0)}'), // optional
             if (!canEdit)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: Text(
-                  'Nur Ansicht (keine Bearbeitung)',
-                  style: TextStyle(color: Colors.black.withAlpha(140), fontWeight: FontWeight.w700),
+                  t.viewOnlyNoEdit,
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha(160), fontWeight: FontWeight.w800),
                 ),
               ),
           ],
@@ -78,9 +88,8 @@ class _TerminDetailsDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Schließen'),
+          child: Text(t.close),
         ),
-
         if (canEdit) ...[
           TextButton(
             onPressed: () async {
@@ -91,36 +100,36 @@ class _TerminDetailsDialog extends StatelessWidget {
               if (picked != null) onMove(picked);
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('Verschieben'),
+            child: Text(t.moveTime),
           ),
           TextButton(
             onPressed: () async {
-              final newMin = await _pickDuration(context, minutes);
+              final newMin = await _pickDuration(context, t, minutes);
               if (newMin != null) onChangeDuration(newMin);
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text('Dauer'),
+            child: Text(t.changeDuration),
           ),
           TextButton(
             onPressed: () {
               onToggleStatus();
               Navigator.pop(context);
             },
-            child: const Text('Status'),
+            child: Text(t.toggleStatus),
           ),
           TextButton(
             onPressed: () {
               onCancel();
               Navigator.pop(context);
             },
-            child: const Text('Stornieren'),
+            child: Text(t.cancelAppointment),
           ),
           TextButton(
             onPressed: () {
               onDelete();
               Navigator.pop(context);
             },
-            child: const Text('Löschen'),
+            child: Text(t.delete),
           ),
         ],
       ],
@@ -133,8 +142,8 @@ class _TerminDetailsDialog extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 110,
-            child: Text(k, style: const TextStyle(fontWeight: FontWeight.w800)),
+            width: 130,
+            child: Text(k, style: const TextStyle(fontWeight: FontWeight.w900)),
           ),
           Expanded(child: Text(v)),
         ],
@@ -142,29 +151,29 @@ class _TerminDetailsDialog extends StatelessWidget {
     );
   }
 
-  Future<int?> _pickDuration(BuildContext context, int current) async {
+  Future<int?> _pickDuration(BuildContext context, AppLocalizations t, int current) async {
     final options = [30, 45, 60, 90, 120];
     int selected = options.contains(current) ? current : 30;
 
     return showDialog<int>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Dauer ändern'),
+        title: Text(t.durationChangeTitle),
         content: StatefulBuilder(
           builder: (context, setState) {
             return DropdownButton<int>(
               value: selected,
               isExpanded: true,
               items: options
-                  .map((m) => DropdownMenuItem(value: m, child: Text('$m Minuten')))
+                  .map((m) => DropdownMenuItem(value: m, child: Text('$m ${t.minutesShort}')))
                   .toList(),
               onChanged: (v) => setState(() => selected = v ?? selected),
             );
           },
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
-          FilledButton(onPressed: () => Navigator.pop(context, selected), child: const Text('OK')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(t.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, selected), child: Text(t.ok)),
         ],
       ),
     );

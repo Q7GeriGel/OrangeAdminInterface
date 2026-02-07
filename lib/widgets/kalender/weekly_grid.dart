@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 import '../../models/termin.dart';
 import 'appointment_block.dart';
 
@@ -68,13 +68,24 @@ class _WeeklyGridState extends State<WeeklyGrid> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final days = _daysMoSa(widget.monday);
     final totalSlots = ((widget.endHour - widget.startHour) * 60) ~/ widget.slotMinutes;
     final totalHeight = totalSlots * widget.slotHeight;
 
     final borderSide = Divider.createBorderSide(context);
 
-    // Header
+    final dayShort = [
+      t.monShort,
+      t.tueShort,
+      t.wedShort,
+      t.thuShort,
+      t.friShort,
+      t.satShort,
+      t.sunShort,
+    ];
+
     final header = SizedBox(
       height: widget.headerHeight,
       child: Row(
@@ -86,7 +97,7 @@ class _WeeklyGridState extends State<WeeklyGrid> {
               child: Row(
                 children: days.map((d) {
                   final label =
-                      '${['Mo','Di','Mi','Do','Fr','Sa'][d.weekday - 1]} '
+                      '${dayShort[d.weekday - 1]} '
                       '${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}';
                   return ConstrainedBox(
                     constraints: BoxConstraints(minWidth: widget.dayColumnMinWidth),
@@ -110,14 +121,12 @@ class _WeeklyGridState extends State<WeeklyGrid> {
       ),
     );
 
-    // Body (vertikal scrollt alles gemeinsam)
     final body = Expanded(
       child: SingleChildScrollView(
         controller: _vertical,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Zeit-Gutter
             SizedBox(
               width: widget.timeGutterWidth,
               height: totalHeight,
@@ -149,7 +158,6 @@ class _WeeklyGridState extends State<WeeklyGrid> {
               ),
             ),
 
-            // Tage (horizontal scroll)
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -172,7 +180,6 @@ class _WeeklyGridState extends State<WeeklyGrid> {
                       child: Stack(
                         clipBehavior: Clip.hardEdge,
                         children: [
-                          // Background grid + empty slot taps
                           Column(
                             children: List.generate(totalSlots, (i) {
                               final slotStart = dayStart.add(Duration(minutes: i * widget.slotMinutes));
@@ -196,7 +203,6 @@ class _WeeklyGridState extends State<WeeklyGrid> {
                             }),
                           ),
 
-                          // Appointment overlays (echte Blöcke)
                           for (final x in laidOut)
                             Positioned(
                               top: _topFor(x.t.start, dayStart),
@@ -239,13 +245,9 @@ class _WeeklyGridState extends State<WeeklyGrid> {
 
   double _laneWidth(int lanes) => (widget.dayColumnMinWidth - 12) / lanes;
 
-  // ---------------------------
-  // Overlap-Layout pro Tag
-  // ---------------------------
   List<_LaidTermin> _layoutDay(List<Termin> list) {
     if (list.isEmpty) return [];
 
-    // Gruppen (überlappende Bereiche)
     final sorted = List<Termin>.from(list)..sort((a, b) => a.start.compareTo(b.start));
 
     final groups = <List<Termin>>[];
@@ -258,7 +260,6 @@ class _WeeklyGridState extends State<WeeklyGrid> {
         currentEnd = t.end;
         continue;
       }
-      // overlap?
       if (t.start.isBefore(currentEnd)) {
         current.add(t);
         if (t.end.isAfter(currentEnd)) currentEnd = t.end;
@@ -270,14 +271,13 @@ class _WeeklyGridState extends State<WeeklyGrid> {
     }
     if (current.isNotEmpty) groups.add(current);
 
-    // pro Gruppe Lanes greedy
     final out = <_LaidTermin>[];
     for (final g in groups) {
       final lanesEnd = <DateTime>[];
       final assigned = <Termin, int>{};
 
       for (final t in g..sort((a, b) => a.start.compareTo(b.start))) {
-        int lane = lanesEnd.indexWhere((e) => !e.isAfter(t.start)); // e <= start
+        int lane = lanesEnd.indexWhere((e) => !e.isAfter(t.start));
         if (lane == -1) {
           lane = lanesEnd.length;
           lanesEnd.add(t.end);

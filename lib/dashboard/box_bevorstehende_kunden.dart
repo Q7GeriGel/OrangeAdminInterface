@@ -4,59 +4,71 @@ import 'package:provider/provider.dart';
 
 import '../controllers/terminplan_controller.dart';
 import '../models/termin.dart';
+import '../l10n/gen/app_localizations.dart';
 import '../widgets/kalender/termin_details_dialog.dart';
 import 'box_shared.dart';
 
 class BevorstehendeKundenBox extends StatelessWidget {
   const BevorstehendeKundenBox({super.key});
 
+  String _statusLabel(AppLocalizations t, String status) {
+    if (status == Termin.statusBestaetigt) return t.statusConfirmed;
+    if (status == Termin.statusAbgesagt) return t.statusCancelled;
+    return t.statusOpen;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final ctrl = context.watch<TerminplanController>();
     final list = ctrl.kommendeHeute(limit: 6);
 
-    Future<void> openDetails(Termin t) async {
+    Future<void> openDetails(Termin x) async {
       await showTerminDetailsDialog(
         context: context,
-        termin: t,
+        termin: x,
+        canEdit: true,
         onMove: (newTime) {
           final newStart = DateTime(
-            t.start.year,
-            t.start.month,
-            t.start.day,
+            x.start.year,
+            x.start.month,
+            x.start.day,
             newTime.hour,
             newTime.minute,
           );
-          ctrl.moveTermin(t.id, newStart);
+          ctrl.moveTermin(x.id, newStart);
         },
-        onChangeDuration: (minutes) => ctrl.updateDuration(t.id, minutes),
-        onToggleStatus: () => ctrl.toggleStatus(t.id),
-        onCancel: () => ctrl.cancelTermin(t.id),
-        onDelete: () => ctrl.deleteTermin(t.id),
+        onChangeDuration: (minutes) => ctrl.updateDuration(x.id, minutes),
+        onToggleStatus: () => ctrl.toggleStatus(x.id),
+        onCancel: () => ctrl.cancelTermin(x.id),
+        onDelete: () => ctrl.deleteTermin(x.id),
       );
     }
 
-    final entries = list.map((t) {
-      final time = DateFormat('HH:mm').format(t.start);
-      final statusColor = _statusColor(t.status);
-      final accent = (t.color ?? statusColor).withAlpha(200);
+    final entries = list.map((x) {
+      final time = DateFormat('HH:mm').format(x.start);
+      final statusColor = _statusColor(x.status);
+      final accent = (x.color ?? statusColor).withAlpha(200);
 
       return DashboardEntry(
-        t.kundeName,
-        subtitle: '${t.mitarbeiterName} • $time',
+        x.kundeName,
+        subtitle: '${x.mitarbeiterName} • $time',
         accent: accent,
-        trailing: _StatusChip(status: t.status, color: statusColor),
-        onTap: () => openDetails(t),
+        trailing: _StatusChip(
+          status: _statusLabel(t, x.status),
+          color: statusColor,
+        ),
+        onTap: () => openDetails(x),
       );
     }).toList();
 
     return DashboardBox(
       icon: Icons.person,
-      titel: 'Bevorstehende Kunden',
+      titel: t.boxUpcomingCustomersTitle,
       eintraege: entries,
       height: 360,
       loading: ctrl.loading,
-      emptyText: 'Keine Termine mehr heute',
+      emptyText: t.boxUpcomingCustomersEmpty,
     );
   }
 

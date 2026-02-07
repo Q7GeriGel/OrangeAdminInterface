@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
-import '../widgets/sidebar.dart';
-import 'auth_gate.dart';
 import 'dashboard.dart';
 import 'kunden.dart';
 import 'mitarbeiter.dart';
-import 'einstellung.dart';
 import 'termine_wochenansicht.dart';
 import 'statistik.dart';
+import 'einstellung.dart';
 
 class Startseite extends StatefulWidget {
-  final String benutzername;
+  final String benutzername; // eingeloggt
   final bool isAdmin;
 
   const Startseite({
     super.key,
     required this.benutzername,
-    this.isAdmin = false,
+    required this.isAdmin,
   });
 
   @override
@@ -25,9 +23,9 @@ class Startseite extends StatefulWidget {
 }
 
 class _StartseiteState extends State<Startseite> {
-  int ausgewaehlterIndex = 0;
+  int _index = 0;
 
-  // ✅ das ist der "aktive" Mitarbeiter (für Ansicht/Statistik/Notizen etc.)
+  // ✅ “Ansicht”-Account (nur Admin kann wechseln)
   late String _aktiverAccount;
 
   @override
@@ -36,103 +34,168 @@ class _StartseiteState extends State<Startseite> {
     _aktiverAccount = widget.benutzername;
   }
 
-  void _setAccount(String name) {
-    setState(() => _aktiverAccount = name);
-  }
-
-  Future<void> _logout() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // ✅ safe cleanup (egal welche keys du vorher genutzt hast)
-    await prefs.remove('username');
-    await prefs.remove('benutzername');
-    await prefs.remove('isAdmin');
-    await prefs.remove('loggedIn');
-    await prefs.remove('loggedInUser');
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthGate()),
-      (_) => false,
-    );
+  void _setAktiverAccount(String u) {
+    if (!widget.isAdmin) return;
+    setState(() => _aktiverAccount = u);
   }
 
   @override
   Widget build(BuildContext context) {
+    final pages = <Widget>[
+      DashboardPage(benutzername: _aktiverAccount),
+      const KundenSeite(),
+      MitarbeiterSeite(
+        benutzername: widget.benutzername,
+        isAdmin: widget.isAdmin,
+        aktiverAccount: _aktiverAccount,
+        onAccountChanged: _setAktiverAccount,
+      ),
+      TermineWochenansicht(
+        isAdmin: widget.isAdmin,
+        sichtMitarbeiterName: _aktiverAccount,
+      ),
+      StatistikSeite(
+        angemeldeterName: _aktiverAccount,
+        isAdmin: widget.isAdmin,
+      ),
+      const EinstellungSeite(),
+    ];
+
     return Scaffold(
       body: Row(
         children: [
-          Sidebar(
-            ausgewaehlterIndex: ausgewaehlterIndex,
-            beimAuswaehlen: (index) => setState(() => ausgewaehlterIndex = index),
-
-            // ✅ für Hesap / Toggle
-            isAdmin: widget.isAdmin,
-            aktiverAccount: _aktiverAccount,
-            onAccountChanged: _setAccount,
-
-            // ✅ Logout wieder da + echt
-            onLogout: _logout,
+          _Rail(
+            index: _index,
+            onChanged: (i) => setState(() => _index = i),
           ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              transitionBuilder: (child, anim) {
-                final slide = Tween<Offset>(
-                  begin: const Offset(0.02, 0),
-                  end: Offset.zero,
-                ).animate(anim);
-
-                return FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(position: slide, child: child),
-                );
-              },
-              child: KeyedSubtree(
-                key: ValueKey(ausgewaehlterIndex),
-                child: _seiteFuerIndex(ausgewaehlterIndex),
-              ),
-            ),
-          ),
+          Expanded(child: pages[_index]),
         ],
       ),
     );
   }
+}
 
-  Widget _seiteFuerIndex(int index) {
-    switch (index) {
-      case 0:
-        return DashboardPage(benutzername: _aktiverAccount);
+class _Rail extends StatelessWidget {
+  final int index;
+  final ValueChanged<int> onChanged;
 
-      case 1:
-        return const KundenSeite();
+  const _Rail({required this.index, required this.onChanged});
 
-      case 2:
-        return MitarbeiterSeite(
-          benutzername: _aktiverAccount,
-          isAdmin: widget.isAdmin,
-          aktiverAccount: _aktiverAccount,
-          onAccountChanged: _setAccount,
-        );
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
 
-      case 3:
-        // ✅ HIER war dein Fehler -> jetzt wird isAdmin übergeben
-        return TermineWochenansicht(isAdmin: widget.isAdmin);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF0E1420) : const Color(0xFFF3F4F6);
 
-      case 4:
-        return StatistikSeite(
-          angemeldeterName: _aktiverAccount,
-          isAdmin: widget.isAdmin,
-        );
+    return Container(
+      width: 240,
+      color: bg,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
+              child: Text(
+                t.appTitle,
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 6),
 
-      case 5:
-        return const EinstellungSeite();
+            _NavItem(
+              icon: Icons.dashboard_outlined,
+              text: t.dashboard,
+              selected: index == 0,
+              onTap: () => onChanged(0),
+            ),
+            _NavItem(
+              icon: Icons.groups_2_outlined,
+              text: t.customers,
+              selected: index == 1,
+              onTap: () => onChanged(1),
+            ),
+            _NavItem(
+              icon: Icons.badge_outlined,
+              text: t.employees,
+              selected: index == 2,
+              onTap: () => onChanged(2),
+            ),
+            _NavItem(
+              icon: Icons.event_available_outlined,
+              text: t.schedule,
+              selected: index == 3,
+              onTap: () => onChanged(3),
+            ),
+            _NavItem(
+              icon: Icons.bar_chart_outlined,
+              text: t.statistics,
+              selected: index == 4,
+              onTap: () => onChanged(4),
+            ),
+            _NavItem(
+              icon: Icons.settings_outlined,
+              text: t.settings,
+              selected: index == 5,
+              onTap: () => onChanged(5),
+            ),
 
-      default:
-        return const Center(child: Text("Unbekannt"));
-    }
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                icon: const Icon(Icons.logout),
+                label: Text(t.logout),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.text,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final border = isDark ? Colors.white12 : Colors.black12;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40) : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: selected ? const Color(0xFFC95B4C).withAlpha(110) : border),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20),
+              const SizedBox(width: 10),
+              Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w800))),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

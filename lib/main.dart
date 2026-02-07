@@ -9,6 +9,8 @@ import 'seiten/auth_gate.dart';
 // Controller / Service / Repo
 import 'controllers/app_settings_controller.dart';
 import 'controllers/terminplan_controller.dart';
+import 'controllers/session_controller.dart';
+
 import 'services/terminplan_service.dart';
 import 'repositories/terminplan_repository.dart';
 
@@ -20,7 +22,7 @@ void main() {
   runApp(const FriseurOrangeApp());
 }
 
-/// ✅ Simple Mock-Datenquelle (RAM) – ersetzt später DB/REST/Prefs
+/// ✅ Simple Mock-Datenquelle (RAM) – ersetzt später DB/REST
 class InMemoryTerminquelle implements Terminquelle {
   final Map<String, List<Termin>> _store = {};
 
@@ -129,6 +131,12 @@ class FriseurOrangeApp extends StatelessWidget {
         ChangeNotifierProvider<AppSettingsController>(
           create: (_) => AppSettingsController()..load(),
         ),
+
+        // ✅ Session (Login + Active Account)
+        ChangeNotifierProvider<SessionController>(
+          create: (_) => SessionController(),
+        ),
+
         Provider<Terminquelle>(
           create: (_) => InMemoryTerminquelle(),
         ),
@@ -159,7 +167,6 @@ class FriseurOrangeApp extends StatelessWidget {
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
 
-            // ✅ wichtig für Logout ohne Import-Circle
             routes: {
               '/login': (_) => const AuthGate(),
             },

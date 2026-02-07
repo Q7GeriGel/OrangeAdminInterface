@@ -29,14 +29,14 @@ class _EinstellungSeiteState extends State<EinstellungSeite> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final t = AppLocalizations.of(context)!;
 
     final settings = context.watch<AppSettingsController>();
     final hasChanges = (_themeMode ?? settings.themeMode) != settings.themeMode ||
         (_locale ?? settings.locale) != settings.locale;
 
     return AppPage(
-      title: l10n.settings,
+      title: t.settings,
       actions: [
         ElevatedButton.icon(
           onPressed: hasChanges
@@ -47,13 +47,13 @@ class _EinstellungSeiteState extends State<EinstellungSeite> {
                       );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.save)),
+                      SnackBar(content: Text(t.saved)),
                     );
                   }
                 }
               : null,
           icon: const Icon(Icons.save_outlined),
-          label: Text(l10n.save),
+          label: Text(t.save),
         ),
       ],
       child: ListView(
@@ -63,15 +63,15 @@ class _EinstellungSeiteState extends State<EinstellungSeite> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AppSectionHeader(
-                  title: l10n.darkMode,
+                  title: t.darkMode,
                   icon: Icons.dark_mode_outlined,
                 ),
                 const SizedBox(height: AppGaps.s12),
                 SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-                    ButtonSegment(value: ThemeMode.system, label: Text('System')),
+                  segments: [
+                    ButtonSegment(value: ThemeMode.light, label: Text(t.themeLight)),
+                    ButtonSegment(value: ThemeMode.dark, label: Text(t.themeDark)),
+                    ButtonSegment(value: ThemeMode.system, label: Text(t.themeSystem)),
                   ],
                   selected: {_themeMode ?? settings.themeMode},
                   onSelectionChanged: (s) => setState(() => _themeMode = s.first),
@@ -85,17 +85,15 @@ class _EinstellungSeiteState extends State<EinstellungSeite> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AppSectionHeader(
-                  title: l10n.language,
+                  title: t.language,
                   icon: Icons.language_outlined,
                 ),
                 const SizedBox(height: AppGaps.s12),
-
-                // WICHTIG: nur 'tr' & 'de' benutzen, weil deine ARBs app_tr.arb / app_de.arb heißen
                 DropdownButtonFormField<Locale>(
-                  value: _locale ?? settings.locale,
-                  items: const [
-                    DropdownMenuItem(value: Locale('de'), child: Text('Deutsch')),
-                    DropdownMenuItem(value: Locale('tr'), child: Text('Türkçe')),
+                  initialValue: _locale ?? settings.locale,
+                  items: [
+                    DropdownMenuItem(value: const Locale('de'), child: Text(t.langGerman)),
+                    DropdownMenuItem(value: const Locale('tr'), child: Text(t.langTurkish)),
                   ],
                   onChanged: (v) => setState(() => _locale = v),
                   decoration: InputDecoration(

@@ -36,10 +36,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get wrongCredentials => 'Falscher Benutzername oder Passwort.';
 
   @override
-  String get usernameTaken => 'Dieser Benutzername ist bereits vergeben.';
-
-  @override
-  String get registerSuccess => 'Registrierung erfolgreich. Jetzt einloggen.';
+  String get allowedAccountsHint =>
+      'Zulässige Accounts: serkan / sedat / samet (Passwort: 123)';
 
   @override
   String get dashboard => 'Dashboard';
@@ -60,7 +58,43 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settings => 'Einstellungen';
 
   @override
+  String get logout => 'Logout';
+
+  @override
+  String get logoutDone => 'Du wurdest ausgeloggt.';
+
+  @override
   String get save => 'Speichern';
+
+  @override
+  String get saved => 'Gespeichert ✅';
+
+  @override
+  String get cancel => 'Abbrechen';
+
+  @override
+  String get close => 'Schließen';
+
+  @override
+  String get delete => 'Löschen';
+
+  @override
+  String get edit => 'Bearbeiten';
+
+  @override
+  String get apply => 'Übernehmen';
+
+  @override
+  String get reset => 'Zurücksetzen';
+
+  @override
+  String get undo => 'Rückgängig';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get minutesShort => 'min';
 
   @override
   String get darkMode => 'Dark Mode';
@@ -84,79 +118,55 @@ class AppLocalizationsDe extends AppLocalizations {
   String get langTurkish => 'Türkçe';
 
   @override
-  String get appointmentsOverview => 'Terminübersicht';
+  String get welcome => 'Willkommen';
+
+  @override
+  String get dailyPlan => 'Hier ist dein Tagesplan:';
+
+  @override
+  String get refreshToday => 'Heute aktualisieren';
+
+  @override
+  String get refreshed => 'Aktualisiert ✅';
 
   @override
   String get newAppointment => 'Neuer Termin';
 
   @override
-  String get idleMe => 'Leerlauf (Ich)';
+  String get newCustomer => 'Neuer Kunde';
 
   @override
-  String get week => 'Woche';
+  String get customerCreated => 'Kunde erstellt:';
 
   @override
-  String get month => 'Monat';
+  String get successAppointmentSaved => 'Termin gespeichert ✅';
 
   @override
-  String get year => 'Jahr';
+  String get kpiAppointmentsToday => 'Termine heute';
 
   @override
-  String get appointments => 'Termine';
+  String get kpiNextAppointment => 'Nächster Termin';
 
   @override
-  String get utilization => 'Auslastung';
+  String get kpiFreeSlots => 'Freie Slots';
 
   @override
-  String get noShows => 'No-Shows';
+  String get kpiChanges => 'Änderungen';
 
   @override
-  String get revenue => 'Umsatz';
+  String get appointmentsOverview => 'Terminübersicht';
 
   @override
-  String get booked => 'gebucht';
+  String get noPermissionAdminOnly => 'Keine Berechtigung (nur Admin).';
 
   @override
-  String get average => 'Durchschnitt';
+  String get today => 'Heute';
 
   @override
-  String get notAppeared => 'nicht erschienen';
+  String get prevWeek => 'Vorherige Woche';
 
   @override
-  String get last7Days => 'letzte 7 Tage';
-
-  @override
-  String get revenueTrend => 'Umsatz-Verlauf';
-
-  @override
-  String get trendByRange => 'Trend nach Zeitraum';
-
-  @override
-  String get total => 'Gesamt';
-
-  @override
-  String get serviceMix => 'Service-Mix';
-
-  @override
-  String get shareByService => 'Anteil nach Leistung';
-
-  @override
-  String get haircut => 'Haarschnitt';
-
-  @override
-  String get beard => 'Bart';
-
-  @override
-  String get color => 'Farbe';
-
-  @override
-  String get appointmentsUtilNoShows => 'Termine · Auslastung · No-Shows';
-
-  @override
-  String get utilizationShort => 'Auslastung';
-
-  @override
-  String get scaleInfo => 'Skala: 0 – max';
+  String get nextWeek => 'Nächste Woche';
 
   @override
   String get monShort => 'Mo';
@@ -180,10 +190,180 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sunShort => 'So';
 
   @override
+  String get customersTitle => 'Kunden';
+
+  @override
+  String get searchHintCustomers =>
+      'Suche bei Name, Telefonnummer oder Datum (dd.MM.yyyy)';
+
+  @override
+  String get filterTitle => 'Filter';
+
+  @override
+  String get filterActivePrefix => 'Filter aktiv:';
+
+  @override
+  String get filterRegularLabel => 'Stammkunde:';
+
+  @override
+  String get filterEmployeeLabel => 'Friseur:';
+
+  @override
+  String get filterAny => 'Egal';
+
+  @override
+  String get filterOnlyRegulars => 'Nur Stammkunden';
+
+  @override
+  String get filterOnlyNonRegulars => 'Nur Nicht-Stammkunden';
+
+  @override
+  String get pickNextAppointment => 'Nächsten Termin auswählen';
+
+  @override
+  String get tableName => 'Name';
+
+  @override
+  String get tablePhone => 'Telefon';
+
+  @override
+  String get tableLastVisit => 'Letzter';
+
+  @override
+  String get tableNextAppointment => 'Nächster Termin';
+
+  @override
+  String get tableStaff => 'Friseur';
+
+  @override
+  String get tableActions => 'Aktionen';
+
+  @override
+  String get tooltipEdit => 'Bearbeiten';
+
+  @override
+  String get tooltipSetAppointment => 'Termin setzen';
+
+  @override
+  String get tooltipDelete => 'Löschen';
+
+  @override
+  String get confirmDeleteTitle => 'Wirklich löschen?';
+
+  @override
+  String get confirmDeleteCustomerText =>
+      'Willst du diesen Kunden wirklich löschen?';
+
+  @override
+  String get deletedCustomer => 'Kunde gelöscht.';
+
+  @override
+  String get confirmDeleteAppointmentText =>
+      'Willst du diesen Termin wirklich löschen?';
+
+  @override
+  String get deletedAppointment => 'Termin gelöscht.';
+
+  @override
+  String get employeesSubtitle => 'Intern • Team-Übersicht & Notizen';
+
+  @override
+  String get account => 'Konto';
+
+  @override
+  String get accountPanelHint =>
+      'Ansicht filtert Dashboard / Termine / Statistik.';
+
+  @override
+  String get roleAdmin => 'Admin';
+
+  @override
+  String get roleStaff => 'Mitarbeiter';
+
+  @override
+  String get freeSlotsToday => 'Freie Zeitfenster heute';
+
+  @override
+  String get notesTitle => 'Notizen';
+
+  @override
+  String get notesHint => 'Notizen…';
+
+  @override
+  String get notesDefaultTemplate =>
+      'Was ist passiert?\nWelche Kunden kamen nicht?\nWas lief gut/schlecht?\nWas soll morgen vorbereitet werden?';
+
+  @override
+  String get notesSaved => 'Notizen gespeichert ✅';
+
+  @override
+  String get noteSavedSnack => 'Notiz gespeichert ✅';
+
+  @override
+  String get free => 'frei';
+
+  @override
+  String get booked => 'gebucht';
+
+  @override
+  String get statisticsTitle => 'Statistik';
+
+  @override
+  String get team => 'Team';
+
+  @override
+  String get onlyMe => 'Nur ich';
+
+  @override
+  String get forMe => 'für mich';
+
+  @override
+  String get forTeam => 'Team';
+
+  @override
+  String get revenueTrendWeekTitle => 'Umsatz-Verlauf (Woche)';
+
+  @override
+  String get idleHeatmapTitle => 'Leerlauf-Heatmap (pro Tag/Zeitslot)';
+
+  @override
+  String get idleHeatmapFor => 'Für:';
+
+  @override
+  String get legendIdle => 'Leerlauf (frei)';
+
+  @override
+  String get legendBooked => 'Belegt';
+
+  @override
+  String get metricWeekRevenue => 'Gesamtumsatz (Woche)';
+
+  @override
+  String get metricTodayRevenue => 'Umsatz heute';
+
+  @override
+  String get metricIdleToday => 'Leerlauf heute';
+
+  @override
+  String get metricUtilToday => 'Auslastung heute';
+
+  @override
+  String get freeSlotsTop => 'Freie Slots heute (Top)';
+
+  @override
+  String get adminToolsLater => 'Admin-Tools (später)';
+
+  @override
+  String get adminToolsDesc => 'Export / erweiterte Filter / Team-Auswertungen';
+
+  @override
   String get createAppointmentTitle => 'Neuer Termin';
 
   @override
   String get customerName => 'Kunde';
+
+  @override
+  String get customerHintExample => 'z.B. Lara Demir';
 
   @override
   String get employee => 'Mitarbeiter';
@@ -207,10 +387,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get statusConfirmed => 'Bestätigt';
 
   @override
-  String get statusCancelled => 'Storniert';
-
-  @override
-  String get cancel => 'Abbrechen';
+  String get statusCancelled => 'Abgesagt';
 
   @override
   String get create => 'Erstellen';
@@ -226,85 +403,47 @@ class AppLocalizationsDe extends AppLocalizations {
       'Termine müssen zwischen 08:00 und 20:00 liegen.';
 
   @override
-  String get successAppointmentSaved => 'Termin gespeichert ✅';
+  String get customerRequired => 'Bitte Kundennamen eingeben.';
 
   @override
-  String get allowedAccountsHint =>
-      'Zulässige Accounts: serkan / sedat / samet (Passwort: 123)';
-
-  @override
-  String get logout => 'Ausloggen';
-
-  @override
-  String get logoutDone => 'Du wurdest ausgeloggt.';
-
-  @override
-  String get today => 'Heute';
-
-  @override
-  String get prevWeek => 'Vorherige Woche';
-
-  @override
-  String get nextWeek => 'Nächste Woche';
-
-  @override
-  String get close => 'Schließen';
+  String get appointmentDetailsTitle => 'Termin Details';
 
   @override
   String get details => 'Details';
 
   @override
-  String get moveTime => 'Uhrzeit ändern';
+  String get moveTime => 'Verschieben';
 
   @override
-  String get changeDuration => 'Dauer ändern';
+  String get changeDuration => 'Dauer';
 
   @override
-  String get toggleStatus => 'Status wechseln';
+  String get durationChangeTitle => 'Dauer ändern';
+
+  @override
+  String get toggleStatus => 'Status';
 
   @override
   String get cancelAppointment => 'Stornieren';
 
   @override
-  String get delete => 'Löschen';
+  String get viewOnlyNoEdit => 'Nur Ansicht (keine Bearbeitung)';
 
   @override
-  String get customerRequired => 'Bitte Kundennamen eingeben.';
+  String get boxCurrentChangesTitle => 'Aktuelle Änderungen';
 
   @override
-  String get totalRevenue => 'Gesamtumsatz';
+  String get boxCurrentChangesEmpty => 'Noch keine Änderungen';
 
   @override
-  String get allowedAccountsNote =>
-      'Erlaubte Accounts: serkan / sedat / samet (PW: 123)';
+  String get boxUpcomingCustomersTitle => 'Bevorstehende Kunden';
 
   @override
-  String get account => 'Konto';
+  String get boxUpcomingCustomersEmpty => 'Keine Termine mehr heute';
 
   @override
-  String get roleAdmin => 'Admin';
+  String get boxFreeSlotsTodayTitle => 'Freie Zeitfenster heute';
 
   @override
-  String get roleStaff => 'Mitarbeiter';
-
-  @override
-  String get employeesSubtitle => 'Intern • Team-Übersicht & Notizen';
-
-  @override
-  String get freeSlotsToday => 'Freie Zeitfenster heute';
-
-  @override
-  String get notesTitle => 'Notizen';
-
-  @override
-  String get notesSaved => 'Notizen gespeichert ✅';
-
-  @override
-  String get notesHint => 'Notizen…';
-
-  @override
-  String get noPermissionAdminOnly => 'Keine Berechtigung (nur Admin).';
-
-  @override
-  String get saved => 'Gespeichert ✅';
+  String get boxFreeSlotsTodayEmpty => 'Heute keine freien Slots';
 }

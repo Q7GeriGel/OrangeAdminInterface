@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/termin.dart';
 import '../../controllers/terminplan_controller.dart';
+import '../../l10n/gen/app_localizations.dart';
 
 class TerminCreateResult {
   final DateTime start;
@@ -29,7 +30,9 @@ Future<TerminCreateResult?> showCreateTerminDialog({
   String initialMitarbeiter = 'Aylin',
   String initialStatus = Termin.statusOffen,
 }) async {
+  final t = AppLocalizations.of(context)!;
   final now = DateTime.now();
+  final locale = Localizations.localeOf(context);
 
   DateTime roundToNext30(DateTime d) {
     final base = DateTime(d.year, d.month, d.day, d.hour, d.minute);
@@ -54,6 +57,28 @@ Future<TerminCreateResult?> showCreateTerminDialog({
     Termin.statusAbgesagt,
   ];
 
+  String statusLabel(String s) {
+    if (s == Termin.statusBestaetigt) return t.statusConfirmed;
+    if (s == Termin.statusAbgesagt) return t.statusCancelled;
+    return t.statusOpen;
+  }
+
+  bool isSunday(DateTime d) => d.weekday == DateTime.sunday;
+
+  bool withinHours(DateTime s) {
+    final h = s.hour;
+    final m = s.minute;
+    final afterOpen = (h > 8) || (h == 8 && m >= 0);
+    final beforeClose = (h < 20) || (h == 20 && m == 0);
+    return afterOpen && beforeClose;
+  }
+
+  bool endBefore20(DateTime s, int minutes) {
+    final end = s.add(Duration(minutes: minutes));
+    final limit = DateTime(s.year, s.month, s.day, 20, 0);
+    return !end.isAfter(limit);
+  }
+
   return showDialog<TerminCreateResult>(
     context: context,
     barrierDismissible: false,
@@ -66,7 +91,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
               initialDate: start,
               firstDate: DateTime(now.year - 1),
               lastDate: DateTime(now.year + 2),
-              locale: const Locale('de', 'DE'),
+              locale: locale,
             );
             if (picked == null) return;
             setState(() {
@@ -93,7 +118,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
           final timeText = DateFormat('HH:mm').format(start);
 
           return AlertDialog(
-            title: const Text('Neuen Termin anlegen'),
+            title: Text(t.createAppointmentTitle),
             content: SizedBox(
               width: 520,
               child: Column(
@@ -101,10 +126,10 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                 children: [
                   TextField(
                     controller: kundenCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Kundenname',
-                      hintText: 'z.B. Lara Demir',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: t.customerName,
+                      hintText: t.customerHintExample,
+                      border: const OutlineInputBorder(),
                     ),
                     textInputAction: TextInputAction.done,
                   ),
@@ -114,28 +139,28 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<String>(
-                          value: mitarbeiter,
+                          initialValue: mitarbeiter,
                           items: mitarbeiterList
                               .map((m) => DropdownMenuItem(value: m, child: Text(m)))
                               .toList(),
                           onChanged: (v) => setState(() => mitarbeiter = v ?? mitarbeiter),
-                          decoration: const InputDecoration(
-                            labelText: 'Mitarbeiter',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: t.employee,
+                            border: const OutlineInputBorder(),
                           ),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          value: duration,
+                          initialValue: duration,
                           items: durationOptions
-                              .map((d) => DropdownMenuItem(value: d, child: Text('$d min')))
+                              .map((d) => DropdownMenuItem(value: d, child: Text('$d ${t.minutesShort}')))
                               .toList(),
                           onChanged: (v) => setState(() => duration = v ?? duration),
-                          decoration: const InputDecoration(
-                            labelText: 'Dauer',
-                            border: OutlineInputBorder(),
+                          decoration: InputDecoration(
+                            labelText: t.durationMinutes,
+                            border: const OutlineInputBorder(),
                           ),
                         ),
                       ),
@@ -167,14 +192,14 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                   const SizedBox(height: 12),
 
                   DropdownButtonFormField<String>(
-                    value: status,
+                    initialValue: status,
                     items: statusOptions
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .map((s) => DropdownMenuItem(value: s, child: Text(statusLabel(s))))
                         .toList(),
                     onChanged: (v) => setState(() => status = v ?? status),
-                    decoration: const InputDecoration(
-                      labelText: 'Status',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: t.status,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ],
@@ -183,21 +208,34 @@ Future<TerminCreateResult?> showCreateTerminDialog({
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Abbrechen'),
+                child: Text(t.cancel),
               ),
               FilledButton.icon(
                 onPressed: () {
                   final name = kundenCtrl.text.trim();
                   if (name.isEmpty) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      const SnackBar(content: Text('Bitte Kundenname eingeben.')),
-                    );
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(t.customerRequired)));
                     return;
                   }
 
                   // Guard: nur 0/30
                   final fixedMinute = start.minute >= 30 ? 30 : 0;
                   final fixedStart = DateTime(start.year, start.month, start.day, start.hour, fixedMinute);
+
+                  if (isSunday(fixedStart)) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(t.invalidDay)));
+                    return;
+                  }
+
+                  if (!withinHours(fixedStart)) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(t.invalidWorkHours)));
+                    return;
+                  }
+
+                  if (!endBefore20(fixedStart, duration)) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(t.invalidTimeRange)));
+                    return;
+                  }
 
                   Navigator.pop(
                     ctx,
@@ -211,7 +249,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                   );
                 },
                 icon: const Icon(Icons.check),
-                label: const Text('Speichern'),
+                label: Text(t.save),
               ),
             ],
           );
@@ -222,7 +260,6 @@ Future<TerminCreateResult?> showCreateTerminDialog({
 }
 
 /// Ultra-clean Flow: öffnet Dialog + speichert direkt im Controller.
-/// Damit rufen Dashboard & Wochenansicht 1 einzige Funktion auf.
 Future<void> openCreateTerminFlow({
   required BuildContext context,
   required TerminplanController ctrl,
@@ -230,6 +267,7 @@ Future<void> openCreateTerminFlow({
   String initialMitarbeiter = 'Aylin',
   String initialStatus = Termin.statusOffen,
 }) async {
+  final t = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
 
   Color colorForMitarbeiter(String name) {
@@ -265,7 +303,5 @@ Future<void> openCreateTerminFlow({
     color: colorForMitarbeiter(res.mitarbeiterName),
   );
 
-  messenger.showSnackBar(
-    const SnackBar(content: Text('Termin gespeichert ✅')),
-  );
+  messenger.showSnackBar(SnackBar(content: Text(t.successAppointmentSaved)));
 }

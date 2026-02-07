@@ -9,7 +9,6 @@ import '../widgets/account_panel.dart';
 class MitarbeiterSeite extends StatefulWidget {
   final String benutzername;
 
-  // ✅ für Sedat
   final bool isAdmin;
   final String aktiverAccount;
   final ValueChanged<String> onAccountChanged;
@@ -29,14 +28,13 @@ class MitarbeiterSeite extends StatefulWidget {
 class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
   final TextEditingController _notesController = TextEditingController();
 
-  // ✅ Mock-DATEN ok (aber echte Funktion):
   final List<String> freieSlots = const [
     "08:00 – 08:30",
     "08:30 – 09:00",
     "09:00 – 09:30",
     "10:00 – 10:30",
     "10:30 – 11:00",
-    "11:00 – 11:30",
+    "11:00 – 11:30"
   ];
 
   String get _notesKey => 'notes_${widget.benutzername.toLowerCase()}';
@@ -66,10 +64,10 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
     final txt = prefs.getString(_notesKey) ?? "";
     if (!mounted) return;
 
+    final t = AppLocalizations.of(context)!;
+
     setState(() {
-      _notesController.text = txt.isEmpty
-          ? "Was ist passiert?\nWelche Kunden kamen nicht?\nWas lief gut/schlecht?\nWas soll morgen vorbereitet werden?"
-          : txt;
+      _notesController.text = txt.isEmpty ? t.notesDefaultTemplate : txt;
     });
   }
 
@@ -80,7 +78,7 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(t.saved)),
+      SnackBar(content: Text(t.notesSaved)),
     );
   }
 
@@ -106,7 +104,6 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
           ),
           const SizedBox(height: AppGaps.s18),
 
-          // ✅ HIER die Hesap Box (nur Admin)
           AccountPanel(
             isAdmin: widget.isAdmin,
             selected: widget.aktiverAccount,
@@ -137,7 +134,8 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _SlotTile(
                                 time: freieSlots[i],
-                                statusText: t.booked, // kannst du später anpassen
+                                freeText: t.free,
+                                bookedText: t.booked,
                                 statusIsFree: true,
                                 isDark: isDark,
                               ),
@@ -176,7 +174,7 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: notesFill,
-                              hintText: t.notesTitle,
+                              hintText: t.notesHint,
                               hintStyle: TextStyle(color: sub),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -310,13 +308,15 @@ class _InnerPanel extends StatelessWidget {
 
 class _SlotTile extends StatelessWidget {
   final String time;
-  final String statusText;
+  final String freeText;
+  final String bookedText;
   final bool statusIsFree;
   final bool isDark;
 
   const _SlotTile({
     required this.time,
-    required this.statusText,
+    required this.freeText,
+    required this.bookedText,
     required this.statusIsFree,
     required this.isDark,
   });
@@ -356,7 +356,7 @@ class _SlotTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadii.pill),
             ),
             child: Text(
-              statusIsFree ? "frei" : statusText,
+              statusIsFree ? freeText : bookedText,
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 color: text,

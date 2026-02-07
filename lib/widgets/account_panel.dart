@@ -6,112 +6,76 @@ class AccountPanel extends StatelessWidget {
   final String selected;
   final ValueChanged<String> onChanged;
 
+  final List<String> accounts;
+
   const AccountPanel({
     super.key,
     required this.isAdmin,
     required this.selected,
     required this.onChanged,
+    this.accounts = const ['serkan', 'sedat', 'samet'],
   });
+
+  String _t(AppLocalizations? l, String fallback, String Function(AppLocalizations x) pick) {
+    if (l == null) return fallback;
+    try {
+      final v = pick(l);
+      return v.trim().isEmpty ? fallback : v;
+    } catch (_) {
+      return fallback;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (!isAdmin) return const SizedBox.shrink(); // ✅ nur Admin/Sedat
+    if (!isAdmin) return const SizedBox.shrink();
 
-    final t = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final bg = isDark ? const Color(0xFF111821) : const Color(0xFFF6F7FB);
-    final bg2 = isDark ? const Color(0xFF141D27) : Colors.white;
-    final border = isDark ? Colors.white.withAlpha(25) : Colors.black.withAlpha(18);
-    const orange = Color(0xFFCC5C4C);
+    final cardBg = isDark ? const Color(0xFF111821) : Colors.white;
+    final border = isDark ? Colors.white12 : Colors.black12;
+    final text = isDark ? Colors.white : Colors.black;
 
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: bg,
+        color: cardBg,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(isDark ? 35 : 18),
-            blurRadius: 16,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
-      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            t.account,
-            style: TextStyle(
-              color: isDark ? Colors.white.withAlpha(210) : Colors.black.withAlpha(160),
-              fontWeight: FontWeight.w800,
-            ),
+            _t(l, 'Konto', (x) => x.account),
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: text),
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.person, color: orange, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  selected,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                  ),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: accounts.map((a) {
+              final sel = a.toLowerCase() == selected.toLowerCase();
+              return ChoiceChip(
+                selected: sel,
+                label: Text(a),
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: sel ? Colors.white : text,
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: orange.withAlpha(25),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: orange.withAlpha(90)),
-                ),
-                child: Text(
-                  t.roleAdmin,
-                  style: const TextStyle(color: orange, fontWeight: FontWeight.w900),
-                ),
-              ),
-            ],
+                selectedColor: const Color(0xFFC95B4C),
+                onSelected: (_) => onChanged(a),
+              );
+            }).toList(),
           ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: bg2,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: border),
-            ),
-            padding: const EdgeInsets.all(6),
-            child: SegmentedButton<String>(
-              showSelectedIcon: true,
-              segments: const [
-                ButtonSegment(value: 'serkan', label: Text('serkan')),
-                ButtonSegment(value: 'sedat', label: Text('sedat')),
-                ButtonSegment(value: 'samet', label: Text('samet')),
-              ],
-              selected: {selected},
-              onSelectionChanged: (set) => onChanged(set.first),
-              style: ButtonStyle(
-                padding: WidgetStateProperty.all(
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                ),
-                backgroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) return orange.withAlpha(35);
-                  return Colors.transparent;
-                }),
-                foregroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) return isDark ? Colors.white : Colors.black;
-                  return (isDark ? Colors.white : Colors.black).withAlpha(170);
-                }),
-                side: WidgetStateProperty.all(const BorderSide(color: Colors.transparent)),
-                shape: WidgetStateProperty.all(
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-              ),
+          const SizedBox(height: 8),
+          Text(
+            _t(l, 'Ansicht filtert Dashboard / Termine / Statistik.', (x) => x.accountPanelHint),
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.black54,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
             ),
           ),
         ],

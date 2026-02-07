@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 
 import '../controllers/notizen_controller.dart';
 import '../controllers/terminplan_controller.dart';
+import '../l10n/gen/app_localizations.dart';
 
-/// Notiz-Kachel (für Mitarbeiter-Tab / wo du willst)
 class BoxShared extends StatefulWidget {
   const BoxShared({super.key});
 
@@ -64,12 +64,19 @@ class _BoxSharedState extends State<BoxShared> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     final terminplan = context.watch<TerminplanController>();
     final notizen = context.watch<NotizenController>();
 
     final day = _asDate(terminplan.tag);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+
     if (_c.text != notizen.text) _c.text = notizen.text;
+
+    final dateText = DateFormat('dd.MM.yyyy').format(day);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -81,14 +88,11 @@ class _BoxSharedState extends State<BoxShared> {
             children: [
               Row(
                 children: [
-                  const Text(
-                    'Notizen',
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
+                  Text(t.notesTitle, style: const TextStyle(fontWeight: FontWeight.w900)),
                   const SizedBox(width: 10),
                   Text(
-                    DateFormat('dd.MM.yyyy').format(day),
-                    style: TextStyle(color: Colors.black.withAlpha(140)),
+                    dateText,
+                    style: TextStyle(color: scheme.onSurface.withAlpha(isDark ? 170 : 140)),
                   ),
                   const Spacer(),
                   FilledButton.icon(
@@ -98,12 +102,10 @@ class _BoxSharedState extends State<BoxShared> {
 
                       await context.read<NotizenController>().speichere(day, txt);
 
-                      messenger.showSnackBar(
-                        const SnackBar(content: Text('Notiz gespeichert')),
-                      );
+                      messenger.showSnackBar(SnackBar(content: Text(t.noteSavedSnack)));
                     },
                     icon: const Icon(Icons.save),
-                    label: const Text('Speichern'),
+                    label: Text(t.save),
                   ),
                 ],
               ),
@@ -113,10 +115,9 @@ class _BoxSharedState extends State<BoxShared> {
                   controller: _c,
                   maxLines: null,
                   expands: true,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText:
-                        'Was ist passiert?\nWelche Kunden kamen nicht?\nWas lief gut/schlecht?\nWas soll morgen vorbereitet werden?',
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    hintText: t.notesDefaultTemplate,
                   ),
                 ),
               ),
@@ -129,13 +130,11 @@ class _BoxSharedState extends State<BoxShared> {
 }
 
 // -------------------
-// Einheitliches Dashboard-Box-System (für alle Dashboard Panels)
+// Dashboard-Box-System (Dark/Light kompatibel)
 // -------------------
 
 class DashboardUi {
-  static const panelBlue = Color(0xFF355573);
   static const headerOrange = Color(0xFFCC5C4C);
-  static const borderGrey = Color(0xFFE9E9E9);
 
   static const outerRadius = 22.0;
   static const innerRadius = 18.0;
@@ -166,17 +165,20 @@ class DashboardPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withAlpha(10),
+        color: isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(10),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: Colors.black.withAlpha(140),
-          fontWeight: FontWeight.w800,
+          color: scheme.onSurface.withAlpha(200),
+          fontWeight: FontWeight.w900,
           fontSize: 12,
         ),
       ),
@@ -224,16 +226,25 @@ class _DashboardBoxState extends State<DashboardBox> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+
+    final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
+    final inner = isDark ? const Color(0xFF141D27) : Colors.white;
+
+    final border = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(18);
+    final tileBorder = isDark ? Colors.white.withAlpha(14) : const Color(0xFFE9E9E9);
+
     return SizedBox(
       height: widget.height,
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: DashboardUi.panelBlue,
+          color: panel,
           borderRadius: BorderRadius.circular(DashboardUi.outerRadius),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(10),
+              color: Colors.black.withAlpha(isDark ? 0 : 10),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -243,7 +254,6 @@ class _DashboardBoxState extends State<DashboardBox> {
           padding: const EdgeInsets.all(14),
           child: Column(
             children: [
-              // Header
               Container(
                 height: 54,
                 decoration: BoxDecoration(
@@ -281,14 +291,18 @@ class _DashboardBoxState extends State<DashboardBox> {
 
               const SizedBox(height: 12),
 
-              // Body
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(DashboardUi.innerRadius),
                   child: Container(
-                    color: Colors.white,
+                    color: inner,
                     padding: const EdgeInsets.all(10),
-                    child: _buildBody(),
+                    child: _buildBody(
+                      isDark: isDark,
+                      scheme: scheme,
+                      tileBorder: tileBorder,
+                      border: border,
+                    ),
                   ),
                 ),
               ),
@@ -299,13 +313,18 @@ class _DashboardBoxState extends State<DashboardBox> {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody({
+    required bool isDark,
+    required ColorScheme scheme,
+    required Color tileBorder,
+    required Color border,
+  }) {
     if (widget.loading && widget.eintraege.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
     if (widget.eintraege.isEmpty) {
-      return _EmptyLine(text: widget.emptyText);
+      return _EmptyLine(text: widget.emptyText, border: border);
     }
 
     final list = ScrollConfiguration(
@@ -317,15 +336,13 @@ class _DashboardBoxState extends State<DashboardBox> {
           physics: const ClampingScrollPhysics(),
           itemCount: widget.eintraege.length,
           separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) => _EntryTile(e: widget.eintraege[i]),
+          itemBuilder: (_, i) => _EntryTile(e: widget.eintraege[i], tileBorder: tileBorder),
         ),
       ),
     );
 
-    // ✅ WEB: KEIN Flutter-Scrollbar (sonst doppelt)
     if (kIsWeb) return list;
 
-    // ✅ Desktop/Mobile: Flutter Scrollbar sichtbar
     return Scrollbar(
       controller: _scrollCtrl,
       thumbVisibility: true,
@@ -338,17 +355,22 @@ class _DashboardBoxState extends State<DashboardBox> {
 
 class _EntryTile extends StatelessWidget {
   final DashboardEntry e;
-  const _EntryTile({required this.e});
+  final Color tileBorder;
+  const _EntryTile({required this.e, required this.tileBorder});
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final accent = e.accent ?? DashboardUi.headerOrange;
     final clickable = e.onTap != null;
-
     final subtitle = (e.subtitle ?? '').trim();
 
+    final tileBg = isDark ? const Color(0xFF141D27) : Colors.white;
+
     return Material(
-      color: Colors.white,
+      color: tileBg,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -360,7 +382,7 @@ class _EntryTile extends StatelessWidget {
           height: DashboardUi.rowHeight,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: DashboardUi.borderGrey),
+            border: Border.all(color: tileBorder),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
@@ -382,7 +404,7 @@ class _EntryTile extends StatelessWidget {
                     Text(
                       e.title,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
+                      style: TextStyle(fontWeight: FontWeight.w900, color: scheme.onSurface),
                     ),
                     if (subtitle.isNotEmpty)
                       Padding(
@@ -391,8 +413,8 @@ class _EntryTile extends StatelessWidget {
                           subtitle,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors.black.withAlpha(150),
-                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface.withAlpha(170),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -404,7 +426,7 @@ class _EntryTile extends StatelessWidget {
                 e.trailing!,
               ] else if (clickable) ...[
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: Colors.black54),
+                Icon(Icons.chevron_right, color: scheme.onSurface.withAlpha(160)),
               ],
             ],
           ),
@@ -416,19 +438,25 @@ class _EntryTile extends StatelessWidget {
 
 class _EmptyLine extends StatelessWidget {
   final String text;
-  const _EmptyLine({required this.text});
+  final Color border;
+  const _EmptyLine({required this.text, required this.border});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+
+    final tileBg = isDark ? const Color(0xFF141D27) : Colors.white;
+
     return Align(
       alignment: Alignment.topCenter,
       child: Container(
         height: 52,
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: tileBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE7E7E7)),
+          border: Border.all(color: border),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
@@ -447,7 +475,7 @@ class _EmptyLine extends StatelessWidget {
                 text,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w800),
+                style: TextStyle(fontWeight: FontWeight.w900, color: scheme.onSurface),
               ),
             ),
           ],

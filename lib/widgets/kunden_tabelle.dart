@@ -2,7 +2,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../models/kunde.dart';
+import '../l10n/gen/app_localizations.dart';
 
 class KundenTabelle extends StatefulWidget {
   const KundenTabelle({
@@ -43,6 +45,8 @@ class _KundenTabelleState extends State<KundenTabelle> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+
     const nameW = 220.0;
     const telW = 220.0;
     const stammW = 120.0;
@@ -53,45 +57,51 @@ class _KundenTabelleState extends State<KundenTabelle> {
 
     const rowH = 56.0;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+
+    // ✅ Farben (schwarze Schrift -> weiß im Dark; "weiß" -> dunkler / nicer)
+    final headerBg = isDark ? const Color(0xFF0F131B) : const Color(0xFFF2F4F7);
+    final rowBg = isDark ? const Color(0xFF141D27) : Colors.white;
+    final rowAltBg = isDark ? const Color(0xFF111821) : const Color(0xFFF9FAFB);
+
     final headerStyle = TextStyle(
-      color: Colors.black.withAlpha(210),
+      color: isDark ? Colors.white.withAlpha(235) : Colors.black.withAlpha(210),
       fontWeight: FontWeight.w900,
       fontSize: 13,
     );
 
     final cellStyle = TextStyle(
-      color: Colors.black.withAlpha(210),
-      fontWeight: FontWeight.w600,
+      color: isDark ? Colors.white.withAlpha(235) : Colors.black.withAlpha(210),
+      fontWeight: FontWeight.w700,
       fontSize: 14,
     );
 
     final subStyle = TextStyle(
-      color: Colors.black.withAlpha(150),
+      color: isDark ? Colors.white.withAlpha(180) : Colors.black.withAlpha(150),
       fontWeight: FontWeight.w600,
       fontSize: 13,
     );
+
+    final divider = isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(14);
+    final headerDivider = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(16);
 
     final totalRows = math.max(widget.kunden.length, widget.minLinien);
 
     return LayoutBuilder(
       builder: (context, c) {
-        final minTableWidth =
-            nameW + telW + stammW + friseurW + letzterW + nextW + actionsW;
-
+        final minTableWidth = nameW + telW + stammW + friseurW + letzterW + nextW + actionsW;
         final tableWidth = math.max(c.maxWidth, minTableWidth);
 
         Widget headerCell(String text, double w, {Alignment a = Alignment.centerLeft}) {
-          return SizedBox(
-            width: w,
-            child: Align(alignment: a, child: Text(text, style: headerStyle)),
-          );
+          return SizedBox(width: w, child: Align(alignment: a, child: Text(text, style: headerStyle)));
         }
 
         Widget dataCell(Widget child, double w, {Alignment a = Alignment.centerLeft}) {
           return SizedBox(width: w, child: Align(alignment: a, child: child));
         }
 
-        Widget rowLine() => Divider(height: 1, thickness: 1, color: Colors.black.withAlpha(14));
+        Widget rowLine() => Divider(height: 1, thickness: 1, color: divider);
 
         final bodyList = ListView.builder(
           controller: _vCtrl,
@@ -99,12 +109,14 @@ class _KundenTabelleState extends State<KundenTabelle> {
           itemBuilder: (context, i) {
             final bool hasData = i < widget.kunden.length;
             final Kunde? k = hasData ? widget.kunden[i] : null;
+            final bg = (i % 2 == 0) ? rowBg : rowAltBg;
 
             return Column(
               children: [
                 Container(
                   height: rowH,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
+                  color: bg,
                   child: Row(
                     children: [
                       dataCell(Text(k?.name ?? '', style: cellStyle), nameW),
@@ -117,7 +129,7 @@ class _KundenTabelleState extends State<KundenTabelle> {
                                 size: 20,
                                 color: k.stammkunde
                                     ? const Color(0xFF2E7D32)
-                                    : Colors.black.withAlpha(120),
+                                    : (isDark ? Colors.white.withAlpha(140) : Colors.black.withAlpha(120)),
                               ),
                         stammW,
                         a: Alignment.center,
@@ -125,7 +137,6 @@ class _KundenTabelleState extends State<KundenTabelle> {
                       dataCell(Text(k?.bevorzugterFriseur ?? '', style: subStyle), friseurW),
                       dataCell(Text(k == null ? '' : _fmtDate(k.letzterHaarschnitt), style: subStyle), letzterW),
                       dataCell(Text(k == null ? '' : _fmtDate(k.naechsterTermin), style: subStyle), nextW),
-
                       SizedBox(
                         width: actionsW,
                         child: Align(
@@ -136,19 +147,19 @@ class _KundenTabelleState extends State<KundenTabelle> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      tooltip: 'Bearbeiten',
+                                      tooltip: t.tooltipEdit,
                                       onPressed: () => widget.onBearbeiten(k),
-                                      icon: const Icon(Icons.edit, size: 20),
+                                      icon: Icon(Icons.edit, size: 20, color: scheme.onSurface.withAlpha(220)),
                                     ),
                                     IconButton(
-                                      tooltip: 'Termin setzen',
+                                      tooltip: t.tooltipSetAppointment,
                                       onPressed: () => widget.onTermin(k),
-                                      icon: const Icon(Icons.calendar_month, size: 20),
+                                      icon: Icon(Icons.calendar_month, size: 20, color: scheme.onSurface.withAlpha(220)),
                                     ),
                                     IconButton(
-                                      tooltip: 'Löschen',
+                                      tooltip: t.tooltipDelete,
                                       onPressed: () => widget.onLoeschen(k),
-                                      icon: const Icon(Icons.delete, size: 20),
+                                      icon: Icon(Icons.delete, size: 20, color: scheme.onSurface.withAlpha(220)),
                                     ),
                                   ],
                                 ),
@@ -171,24 +182,22 @@ class _KundenTabelleState extends State<KundenTabelle> {
                 height: rowH,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF6F7F9),
-                  border: Border(bottom: BorderSide(color: Colors.black.withAlpha(16))),
+                  color: headerBg,
+                  border: Border(bottom: BorderSide(color: headerDivider)),
                 ),
                 child: Row(
                   children: [
-                    headerCell('Name', nameW),
-                    headerCell('Telefonnummer', telW),
-                    headerCell('Stammkunde', stammW, a: Alignment.center),
-                    headerCell('Bevorzugter Friseur', friseurW),
-                    headerCell('Letzter', letzterW),
-                    headerCell('Nächster Termin', nextW),
-                    headerCell('Aktionen', actionsW, a: Alignment.centerRight),
+                    headerCell(t.tableName, nameW),
+                    headerCell(t.tablePhone, telW),
+                    headerCell(t.filterRegularLabel.replaceAll(':', ''), stammW, a: Alignment.center),
+                    headerCell(t.tableStaff, friseurW),
+                    headerCell(t.tableLastVisit, letzterW),
+                    headerCell(t.tableNextAppointment, nextW),
+                    headerCell(t.tableActions, actionsW, a: Alignment.centerRight),
                   ],
                 ),
               ),
-
               Expanded(
-                // ✅ WEB: keine Flutter-Scrollbar (Browser macht das schon) -> wirkt cleaner
                 child: kIsWeb
                     ? bodyList
                     : Scrollbar(
@@ -201,7 +210,6 @@ class _KundenTabelleState extends State<KundenTabelle> {
           ),
         );
 
-        // Horizontal scroll nur wenn nötig
         return Scrollbar(
           controller: _hCtrl,
           thumbVisibility: tableWidth > c.maxWidth,
