@@ -1,7 +1,6 @@
+import 'package:flutter/material.dart';
 import '../models/termin.dart';
 import '../repositories/terminquelle.dart';
-import 'package:flutter/material.dart';
-
 
 class TerminplanService {
   final Terminquelle quelle;
@@ -10,8 +9,7 @@ class TerminplanService {
 
   Future<List<Termin>> ladeWoche(DateTime monday) => quelle.ladeWoche(monday);
 
-  Future<void> speichereWoche(DateTime monday, List<Termin> termine) =>
-      quelle.speichereWoche(monday, termine);
+  Future<void> speichereWoche(DateTime monday, List<Termin> termine) => quelle.speichereWoche(monday, termine);
 
   // Helper: findet Montag der Woche
   DateTime mondayOf(DateTime d) {
@@ -20,12 +18,11 @@ class TerminplanService {
     return dd.subtract(Duration(days: diff));
   }
 
-  // ✅ wird von createTerminManual benutzt
   Future<Termin> createTerminAt(
     DateTime slotStart, {
     int minutes = 30,
     String kundeName = 'Neuer Kunde',
-    String mitarbeiterName = 'Aylin',
+    String mitarbeiterName = 'Serkan', // ✅ FIX (war Aylin)
     String status = Termin.statusOffen,
     String? service,
     double? price,

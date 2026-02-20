@@ -10,6 +10,7 @@ import 'seiten/auth_gate.dart';
 import 'controllers/app_settings_controller.dart';
 import 'controllers/terminplan_controller.dart';
 import 'controllers/session_controller.dart';
+import 'controllers/kunden_verwaltung.dart';
 
 import 'services/terminplan_service.dart';
 import 'repositories/terminplan_repository.dart';
@@ -137,6 +138,11 @@ class FriseurOrangeApp extends StatelessWidget {
           create: (_) => SessionController(),
         ),
 
+        // ✅ Kunden global (damit Dashboard + Kunden-Seite dieselbe Liste nutzen)
+        ChangeNotifierProvider<KundenVerwaltung>(
+          create: (_) => KundenVerwaltung(),
+        ),
+
         Provider<Terminquelle>(
           create: (_) => InMemoryTerminquelle(),
         ),
@@ -166,11 +172,9 @@ class FriseurOrangeApp extends StatelessWidget {
             locale: settings.locale,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-
             routes: {
               '/login': (_) => const AuthGate(),
             },
-
             home: const AuthGate(),
           );
         },

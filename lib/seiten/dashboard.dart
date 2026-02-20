@@ -39,7 +39,6 @@ class DashboardPage extends StatelessWidget {
     final ctrl = context.watch<TerminplanController>();
     final messenger = ScaffoldMessenger.of(context);
 
-    // ✅ Locale sauber (statt fix 'de_DE')
     final locale = Localizations.localeOf(context).toString();
     final todayText = DateFormat('EEEE, dd.MM.yyyy', locale).format(DateTime.now());
 
@@ -121,6 +120,7 @@ class DashboardPage extends StatelessWidget {
                                 onPressed: () => openCreateTerminFlow(
                                   context: context,
                                   ctrl: ctrl,
+                                  initialMitarbeiter: benutzername, // ✅ FIX
                                 ),
                                 icon: const Icon(Icons.add),
                                 label: Text(t.newAppointment),
@@ -146,9 +146,7 @@ class DashboardPage extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 6),
-
                   Text(
                     t.dailyPlan,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -156,9 +154,7 @@ class DashboardPage extends StatelessWidget {
                           color: scheme.onSurface,
                         ),
                   ),
-
                   const SizedBox(height: 14),
-
                   LayoutBuilder(
                     builder: (context, c) {
                       final w = c.maxWidth;
@@ -227,9 +223,7 @@ class DashboardPage extends StatelessWidget {
                       );
                     },
                   ),
-
                   const SizedBox(height: 18),
-
                   LayoutBuilder(
                     builder: (context, c) {
                       final w = c.maxWidth;
@@ -257,7 +251,6 @@ class DashboardPage extends StatelessWidget {
                       );
                     },
                   ),
-
                   const SizedBox(height: 22),
                 ],
               ),

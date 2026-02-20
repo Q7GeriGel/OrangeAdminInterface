@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
+
 import '../controllers/terminplan_controller.dart';
 import '../models/termin.dart';
-import '../l10n/gen/app_localizations.dart';
 
 import '../widgets/kalender/weekly_header.dart';
 import '../widgets/kalender/weekly_grid.dart';
@@ -20,8 +21,7 @@ class TermineWochenansicht extends StatelessWidget {
     required this.sichtMitarbeiterName,
   });
 
-  bool _sameName(String a, String b) =>
-      a.trim().toLowerCase() == b.trim().toLowerCase();
+  bool _sameName(String a, String b) => a.trim().toLowerCase() == b.trim().toLowerCase();
 
   void _noPerm(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -40,9 +40,7 @@ class TermineWochenansicht extends StatelessWidget {
     final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
     final inner = isDark ? const Color(0xFF141D27) : Colors.white;
 
-    final filtered = ctrl.termine
-        .where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName))
-        .toList();
+    final filtered = ctrl.termine.where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName)).toList();
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -65,7 +63,11 @@ class TermineWochenansicht extends StatelessWidget {
                   ),
                   OutlinedButton.icon(
                     onPressed: isAdmin
-                        ? () => openCreateTerminFlow(context: context, ctrl: ctrl)
+                        ? () => openCreateTerminFlow(
+                              context: context,
+                              ctrl: ctrl,
+                              initialMitarbeiter: sichtMitarbeiterName, // ✅ FIX
+                            )
                         : () => _noPerm(context),
                     icon: const Icon(Icons.add),
                     label: Text(l.newAppointment),
@@ -104,6 +106,7 @@ class TermineWochenansicht extends StatelessWidget {
                                         context: context,
                                         ctrl: ctrl,
                                         presetStart: slot,
+                                        initialMitarbeiter: sichtMitarbeiterName, // ✅ FIX
                                       )
                                     : _noPerm(context),
                                 onDoubleTapTermin: (Termin t) async {
@@ -121,8 +124,7 @@ class TermineWochenansicht extends StatelessWidget {
                                       );
                                       ctrl.moveTermin(t.id, newStart);
                                     },
-                                    onChangeDuration: (minutes) =>
-                                        ctrl.updateDuration(t.id, minutes),
+                                    onChangeDuration: (minutes) => ctrl.updateDuration(t.id, minutes),
                                     onToggleStatus: () => ctrl.toggleStatus(t.id),
                                     onCancel: () => ctrl.cancelTermin(t.id),
                                     onDelete: () => ctrl.deleteTermin(t.id),

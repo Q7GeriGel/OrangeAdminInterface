@@ -10,8 +10,7 @@ class FreiesZeitfenster {
 
   FreiesZeitfenster(this.start, this.end);
 
-  String get beschriftung =>
-      '${DateFormat('HH:mm').format(start)} – ${DateFormat('HH:mm').format(end)}';
+  String get beschriftung => '${DateFormat('HH:mm').format(start)} – ${DateFormat('HH:mm').format(end)}';
 }
 
 class TerminplanController extends ChangeNotifier {
@@ -110,7 +109,6 @@ class TerminplanController extends ChangeNotifier {
     return list.take(limit).toList();
   }
 
-  // ✅ damit dashboard.dart nicht heult
   int termineHeuteTotal({bool includeAbgesagt = false}) {
     final d0 = DateTime(tag.year, tag.month, tag.day);
 
@@ -151,7 +149,6 @@ class TerminplanController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ HIER IST DEIN FIX: createTerminManual existiert jetzt
   Future<void> createTerminManual({
     required DateTime start,
     required int minutes,
@@ -163,7 +160,7 @@ class TerminplanController extends ChangeNotifier {
     String? notes,
     Color? color,
   }) async {
-    final t = await service.createTerminAt(
+    final created = await service.createTerminAt(
       start,
       minutes: minutes,
       kundeName: kundeName,
@@ -175,15 +172,18 @@ class TerminplanController extends ChangeNotifier {
       color: color,
     );
 
-    _log('Neu: ${t.kundeName} • ${DateFormat('HH:mm').format(t.start)}');
-    await ladeWoche(currentWeekMonday);
+    _log('Neu: ${created.kundeName} • ${DateFormat('HH:mm').format(created.start)}');
+
+    // ✅ FIX: immer die Woche laden, in der der Termin liegt
+    await ladeWoche(_mondayOf(start));
   }
 
-  // alte Actions bleiben
   Future<void> createTerminAt(DateTime slotStart) async {
-    final t = await service.createTerminAt(slotStart);
-    _log('Neu: ${t.kundeName} • ${DateFormat('HH:mm').format(t.start)}');
-    await ladeWoche(currentWeekMonday);
+    final created = await service.createTerminAt(slotStart);
+    _log('Neu: ${created.kundeName} • ${DateFormat('HH:mm').format(created.start)}');
+
+    // ✅ FIX: Woche vom Slot laden
+    await ladeWoche(_mondayOf(slotStart));
   }
 
   Future<void> deleteTermin(String id) async {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
@@ -14,7 +15,6 @@ class KundenSeite extends StatefulWidget {
 }
 
 class _KundenSeiteState extends State<KundenSeite> {
-  final verwaltung = KundenVerwaltung();
   final sucheCtrl = TextEditingController();
   final datumFmt = DateFormat('dd.MM.yyyy');
 
@@ -24,19 +24,20 @@ class _KundenSeiteState extends State<KundenSeite> {
   void initState() {
     super.initState();
     sucheCtrl.addListener(() {
-      verwaltung.sucheSetzen(sucheCtrl.text);
-      setState(() {});
+      // ✅ globaler Provider
+      context.read<KundenVerwaltung>().sucheSetzen(sucheCtrl.text);
     });
   }
 
   @override
   void dispose() {
     sucheCtrl.dispose();
-    verwaltung.dispose();
     super.dispose();
   }
 
   Future<void> _filterDialog() async {
+    final verwaltung = context.read<KundenVerwaltung>();
+
     bool? nurStamm = verwaltung.nurStammkunden;
     String? friseur = verwaltung.friseur;
 
@@ -107,7 +108,6 @@ class _KundenSeiteState extends State<KundenSeite> {
                   onPressed: () {
                     verwaltung.filterSetzen(nurStammkunden: nurStamm, friseur: friseur);
                     Navigator.pop(context);
-                    setState(() {});
                   },
                   child: const Text('Übernehmen'),
                 ),
@@ -120,6 +120,8 @@ class _KundenSeiteState extends State<KundenSeite> {
   }
 
   Future<void> _dialogHinzufuegenBearbeiten({Kunde? bearbeiten}) async {
+    final verwaltung = context.read<KundenVerwaltung>();
+
     final result = await showDialog<Kunde>(
       context: context,
       barrierDismissible: false,
@@ -132,10 +134,11 @@ class _KundenSeiteState extends State<KundenSeite> {
     } else {
       verwaltung.bearbeiten(result);
     }
-    setState(() {});
   }
 
   Future<void> _naechstenTerminWaehlen(Kunde k) async {
+    final verwaltung = context.read<KundenVerwaltung>();
+
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -146,11 +149,10 @@ class _KundenSeiteState extends State<KundenSeite> {
     if (picked != null) {
       final u = k.kopie()..naechsterTermin = picked;
       verwaltung.bearbeiten(u);
-      setState(() {});
     }
   }
 
-  String? _activeFilterText() {
+  String? _activeFilterText(KundenVerwaltung verwaltung) {
     final parts = <String>[];
 
     final stamm = verwaltung.nurStammkunden;
@@ -164,15 +166,16 @@ class _KundenSeiteState extends State<KundenSeite> {
     return parts.join(' • ');
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
+    final verwaltung = context.watch<KundenVerwaltung>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final pageBg = isDark ? const Color(0xFF0B0F14) : const Color(0xFFECEDEE);
     final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
     final surface = isDark ? const Color(0xFF141D27) : Colors.white;
 
-    final activeFilters = _activeFilterText();
+    final activeFilters = _activeFilterText(verwaltung);
 
     return Container(
       color: pageBg,
@@ -259,8 +262,6 @@ class _KundenSeiteState extends State<KundenSeite> {
                               ),
                             ),
                             const SizedBox(width: 12),
-
-                            // ✅ Button darf orange sein (wie du willst)
                             FilledButton.icon(
                               onPressed: () => _dialogHinzufuegenBearbeiten(),
                               style: FilledButton.styleFrom(
@@ -274,7 +275,6 @@ class _KundenSeiteState extends State<KundenSeite> {
                             ),
                           ],
                         ),
-
                         if (activeFilters != null) ...[
                           const SizedBox(height: 10),
                           Text(
@@ -287,7 +287,6 @@ class _KundenSeiteState extends State<KundenSeite> {
                         ] else ...[
                           const SizedBox(height: 12),
                         ],
-
                         Expanded(
                           child: Container(
                             decoration: BoxDecoration(
@@ -299,8 +298,6 @@ class _KundenSeiteState extends State<KundenSeite> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(18),
-
-                              // ✅ HIER kommt der Fix für: Refik Erdogan / Nummer etc -> WEISS im Darkmode
                               child: DataTableTheme(
                                 data: DataTableThemeData(
                                   dataTextStyle: TextStyle(
@@ -317,7 +314,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                                   kunden: verwaltung.kunden,
                                   datumFmt: datumFmt,
                                   onBearbeiten: (k) => _dialogHinzufuegenBearbeiten(bearbeiten: k),
-                                  onLoeschen: (k) => setState(() => verwaltung.loeschen(k.id)),
+                                  onLoeschen: (k) => verwaltung.loeschen(k.id),
                                   onTermin: _naechstenTerminWaehlen,
                                   minLinien: 14,
                                 ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/termin.dart';
 import '../../controllers/terminplan_controller.dart';
+import '../../controllers/kunden_verwaltung.dart';
 import '../../l10n/gen/app_localizations.dart';
 
 class TerminCreateResult {
@@ -27,12 +29,22 @@ class TerminCreateResult {
 Future<TerminCreateResult?> showCreateTerminDialog({
   required BuildContext context,
   DateTime? initialStart,
-  String initialMitarbeiter = 'Aylin',
+  String initialMitarbeiter = 'Serkan',
   String initialStatus = Termin.statusOffen,
 }) async {
   final t = AppLocalizations.of(context)!;
   final now = DateTime.now();
   final locale = Localizations.localeOf(context);
+
+  // ✅ Kunden-Liste aus Provider (für Autocomplete)
+  final kundenNames = context
+      .read<KundenVerwaltung>()
+      .kunden
+      .map((k) => k.name.trim())
+      .where((s) => s.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
   DateTime roundToNext30(DateTime d) {
     final base = DateTime(d.year, d.month, d.day, d.hour, d.minute);
@@ -45,11 +57,20 @@ Future<TerminCreateResult?> showCreateTerminDialog({
   DateTime start = initialStart ?? roundToNext30(now);
   int duration = 30;
 
-  final kundenCtrl = TextEditingController(text: '');
-  String mitarbeiter = initialMitarbeiter;
+  // ✅ Nur diese 3 Mitarbeiter
+  const mitarbeiterList = ['Serkan', 'Samet', 'Sedat'];
+
+  String normalizeMitarbeiter(String input) {
+    final low = input.trim().toLowerCase();
+    for (final m in mitarbeiterList) {
+      if (m.toLowerCase() == low) return m;
+    }
+    return mitarbeiterList.first; // fallback Serkan
+  }
+
+  String mitarbeiter = normalizeMitarbeiter(initialMitarbeiter);
   String status = initialStatus;
 
-  const mitarbeiterList = ['Aylin', 'Kaan', 'Selin', 'Mert'];
   const durationOptions = [30, 45, 60, 90, 120];
   const statusOptions = [
     Termin.statusOffen,
@@ -78,6 +99,8 @@ Future<TerminCreateResult?> showCreateTerminDialog({
     final limit = DateTime(s.year, s.month, s.day, 20, 0);
     return !end.isAfter(limit);
   }
+
+  TextEditingController? kundeCtrlRef;
 
   return showDialog<TerminCreateResult>(
     context: context,
@@ -124,15 +147,31 @@ Future<TerminCreateResult?> showCreateTerminDialog({
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(
-                    controller: kundenCtrl,
-                    decoration: InputDecoration(
-                      labelText: t.customerName,
-                      hintText: t.customerHintExample,
-                      border: const OutlineInputBorder(),
-                    ),
-                    textInputAction: TextInputAction.done,
+                  // ✅ Kunde auswählen (Autocomplete)
+                  Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue value) {
+                      final q = value.text.trim().toLowerCase();
+                      if (q.isEmpty) return const Iterable<String>.empty();
+                      return kundenNames.where((n) => n.toLowerCase().contains(q));
+                    },
+                    onSelected: (sel) {
+                      if (kundeCtrlRef != null) kundeCtrlRef!.text = sel;
+                    },
+                    fieldViewBuilder: (context, textCtrl, focusNode, onFieldSubmitted) {
+                      kundeCtrlRef = textCtrl;
+                      return TextField(
+                        controller: textCtrl,
+                        focusNode: focusNode,
+                        decoration: InputDecoration(
+                          labelText: t.customerName,
+                          hintText: t.customerHintExample,
+                          border: const OutlineInputBorder(),
+                        ),
+                        textInputAction: TextInputAction.done,
+                      );
+                    },
                   ),
+
                   const SizedBox(height: 12),
 
                   Row(
@@ -212,13 +251,12 @@ Future<TerminCreateResult?> showCreateTerminDialog({
               ),
               FilledButton.icon(
                 onPressed: () {
-                  final name = kundenCtrl.text.trim();
+                  final name = (kundeCtrlRef?.text ?? '').trim();
                   if (name.isEmpty) {
                     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(t.customerRequired)));
                     return;
                   }
 
-                  // Guard: nur 0/30
                   final fixedMinute = start.minute >= 30 ? 30 : 0;
                   final fixedStart = DateTime(start.year, start.month, start.day, start.hour, fixedMinute);
 
@@ -226,12 +264,10 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(t.invalidDay)));
                     return;
                   }
-
                   if (!withinHours(fixedStart)) {
                     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(t.invalidWorkHours)));
                     return;
                   }
-
                   if (!endBefore20(fixedStart, duration)) {
                     ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(t.invalidTimeRange)));
                     return;
@@ -264,22 +300,22 @@ Future<void> openCreateTerminFlow({
   required BuildContext context,
   required TerminplanController ctrl,
   DateTime? presetStart,
-  String initialMitarbeiter = 'Aylin',
+  String initialMitarbeiter = 'Serkan',
   String initialStatus = Termin.statusOffen,
 }) async {
   final t = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
 
   Color colorForMitarbeiter(String name) {
-    switch (name) {
-      case 'Aylin':
-        return const Color(0xFF2E7DDB);
-      case 'Kaan':
-        return const Color(0xFFFF9800);
-      case 'Selin':
-        return const Color(0xFF00A7A7);
+    switch (name.trim().toLowerCase()) {
+      case 'serkan':
+        return const Color(0xFFC95B4C);
+      case 'samet':
+        return const Color(0xFF3A6EA5);
+      case 'sedat':
+        return const Color(0xFF2E7D32);
       default:
-        return const Color(0xFF7E57C2);
+        return const Color(0xFFC95B4C);
     }
   }
 
