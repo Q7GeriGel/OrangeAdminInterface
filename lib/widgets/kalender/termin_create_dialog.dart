@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../config/staff_config.dart';
 import '../../models/termin.dart';
 import '../../controllers/terminplan_controller.dart';
 import '../../controllers/kunden_verwaltung.dart';
@@ -35,9 +36,12 @@ Future<TerminCreateResult?> showCreateTerminDialog({
   int duration = 30;
 
   const mitarbeiterList = KundenVerwaltung.allowedMitarbeiter;
-  String mitarbeiter = initialMitarbeiter != null && mitarbeiterList.contains(initialMitarbeiter)
-      ? initialMitarbeiter
-      : mitarbeiterList.first;
+  String mitarbeiter =
+      StaffConfig.normalizeEmployee(initialMitarbeiter ?? '');
+
+  if (!mitarbeiterList.contains(mitarbeiter)) {
+    mitarbeiter = mitarbeiterList.first;
+  }
 
   String status = Termin.statusOffen;
 
@@ -50,7 +54,11 @@ Future<TerminCreateResult?> showCreateTerminDialog({
   final timeFmt = DateFormat('HH:mm');
 
   const durationOptions = <int>[15, 30, 45, 60, 75, 90, 105, 120];
-  const statusOptions = <String>[Termin.statusOffen, Termin.statusBestaetigt, Termin.statusAbgesagt];
+  const statusOptions = <String>[
+    Termin.statusOffen,
+    Termin.statusBestaetigt,
+    Termin.statusAbgesagt,
+  ];
 
   String statusLabel(String s) {
     switch (s) {
@@ -81,32 +89,49 @@ Future<TerminCreateResult?> showCreateTerminDialog({
               );
               if (picked == null) return;
               setState(() {
-                start = DateTime(picked.year, picked.month, picked.day, start.hour, start.minute);
+                start = DateTime(
+                  picked.year,
+                  picked.month,
+                  picked.day,
+                  start.hour,
+                  start.minute,
+                );
               });
             }
 
             Future<void> pickTime() async {
               final picked = await showTimePicker(
                 context: dialogCtx,
-                initialTime: TimeOfDay(hour: start.hour, minute: start.minute),
+                initialTime:
+                    TimeOfDay(hour: start.hour, minute: start.minute),
               );
               if (picked == null) return;
               setState(() {
-                start = DateTime(start.year, start.month, start.day, picked.hour, picked.minute);
+                start = DateTime(
+                  start.year,
+                  start.month,
+                  start.day,
+                  picked.hour,
+                  picked.minute,
+                );
               });
             }
 
             Future<void> save() async {
               final kundeName = kundeCtrl.text.trim();
               if (kundeName.isEmpty) {
-                messenger.showSnackBar(SnackBar(content: Text(t.customerRequired)));
+                messenger.showSnackBar(
+                  SnackBar(content: Text(t.customerRequired)),
+                );
                 return;
               }
 
               final startMinutes = start.hour * 60 + start.minute;
               final endMinutes = startMinutes + duration;
               if (startMinutes < 8 * 60 || endMinutes > 20 * 60) {
-                messenger.showSnackBar(SnackBar(content: Text(t.invalidWorkHours)));
+                messenger.showSnackBar(
+                  SnackBar(content: Text(t.invalidWorkHours)),
+                );
                 return;
               }
 
@@ -121,7 +146,8 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                   start: start,
                   durationMinutes: duration,
                   kundeName: kundeName,
-                  mitarbeiterName: mitarbeiter,
+                  mitarbeiterName:
+                      StaffConfig.normalizeEmployee(mitarbeiter),
                   status: status,
                 ),
               );
@@ -158,19 +184,26 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                       optionsBuilder: (value) {
                         final q = value.text.trim().toLowerCase();
                         if (q.isEmpty) return const Iterable<String>.empty();
-                        return kundenNamen.where((n) => n.toLowerCase().contains(q)).take(10);
+                        return kundenNamen
+                            .where((n) => n.toLowerCase().contains(q))
+                            .take(10);
                       },
                       onSelected: (s) => kundeCtrl.text = s,
-                      fieldViewBuilder: (ctx, textCtrl, focusNode, onSubmit) {
+                      fieldViewBuilder:
+                          (ctx, textCtrl, focusNode, onSubmit) {
                         textCtrl.text = kundeCtrl.text;
-                        textCtrl.addListener(() => kundeCtrl.text = textCtrl.text);
+                        textCtrl.addListener(
+                          () => kundeCtrl.text = textCtrl.text,
+                        );
                         return TextField(
                           controller: textCtrl,
                           focusNode: focusNode,
                           decoration: InputDecoration(
                             labelText: t.customerName,
                             hintText: t.customerHintExample,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         );
                       },
@@ -179,36 +212,61 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                     DropdownButtonFormField<int>(
                       initialValue: duration,
                       items: durationOptions
-                          .map((m) => DropdownMenuItem(value: m, child: Text('${m}${t.minutesShort}')))
+                          .map(
+                            (m) => DropdownMenuItem(
+                              value: m,
+                              child: Text('${m}${t.minutesShort}'),
+                            ),
+                          )
                           .toList(),
-                      onChanged: (v) => setState(() => duration = v ?? duration),
+                      onChanged: (v) =>
+                          setState(() => duration = v ?? duration),
                       decoration: InputDecoration(
                         labelText: t.duration,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      initialValue: mitarbeiterList.contains(mitarbeiter) ? mitarbeiter : mitarbeiterList.first,
+                      initialValue: mitarbeiter,
                       items: mitarbeiterList
-                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(s),
+                            ),
+                          )
                           .toList(),
-                      onChanged: (v) => setState(() => mitarbeiter = v ?? mitarbeiter),
+                      onChanged: (v) => setState(
+                        () => mitarbeiter =
+                            StaffConfig.normalizeEmployee(v ?? mitarbeiter),
+                      ),
                       decoration: InputDecoration(
                         labelText: t.employee,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: status,
                       items: statusOptions
-                          .map((s) => DropdownMenuItem(value: s, child: Text(statusLabel(s))))
+                          .map(
+                            (s) => DropdownMenuItem(
+                              value: s,
+                              child: Text(statusLabel(s)),
+                            ),
+                          )
                           .toList(),
                       onChanged: (v) => setState(() => status = v ?? status),
                       decoration: InputDecoration(
                         labelText: t.status,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ],
@@ -222,7 +280,11 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                 ElevatedButton(
                   onPressed: saving ? null : save,
                   child: saving
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : Text(t.save),
                 ),
               ],
@@ -257,19 +319,9 @@ Future<void> openCreateTerminFlow({
     start: res.start,
     minutes: res.durationMinutes,
     kundeName: res.kundeName,
-    mitarbeiterName: res.mitarbeiterName,
+    mitarbeiterName: StaffConfig.normalizeEmployee(res.mitarbeiterName),
     status: res.status,
   );
-
-  if (!context.mounted) return;
-
-  await context.read<KundenVerwaltung>().erstelleKundeFallsFehlt(
-        name: res.kundeName,
-        bevorzugterFriseur: res.mitarbeiterName,
-        naechsterTermin: res.start,
-      );
-
-  if (!context.mounted) return;
 
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(t.successAppointmentSaved)),

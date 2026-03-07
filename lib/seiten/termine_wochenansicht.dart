@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
 import '../controllers/terminplan_controller.dart';
-import '../l10n/gen/app_localizations.dart';
-
+import '../models/termin.dart';
 import '../widgets/kalender/weekly_header.dart';
 import '../widgets/kalender/weekly_grid.dart';
 import '../widgets/kalender/termin_details_dialog.dart';
 import '../widgets/kalender/termin_create_dialog.dart';
-import '../models/termin.dart';
 
 class TermineWochenansicht extends StatelessWidget {
   final bool isAdmin;
@@ -20,14 +19,8 @@ class TermineWochenansicht extends StatelessWidget {
     required this.sichtMitarbeiterName,
   });
 
-  bool _sameName(String a, String b) => a.trim().toLowerCase() == b.trim().toLowerCase();
-
-  void _noPerm(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l.noPermissionAdminOnly)),
-    );
-  }
+  bool _sameName(String a, String b) =>
+      a.trim().toLowerCase() == b.trim().toLowerCase();
 
   @override
   Widget build(BuildContext context) {
@@ -39,8 +32,9 @@ class TermineWochenansicht extends StatelessWidget {
     final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
     final inner = isDark ? const Color(0xFF141D27) : Colors.white;
 
-    final filtered =
-        ctrl.termine.where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName)).toList();
+    final filtered = ctrl.termine
+        .where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName))
+        .toList();
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -55,17 +49,18 @@ class TermineWochenansicht extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '${l.appointmentsOverview} • $sichtMitarbeiterName',
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                   OutlinedButton.icon(
-                    onPressed: isAdmin
-                        ? () => openCreateTerminFlow(
-                              context: context,
-                              ctrl: ctrl,
-                              initialMitarbeiter: sichtMitarbeiterName,
-                            )
-                        : () => _noPerm(context),
+                    onPressed: () => openCreateTerminFlow(
+                      context: context,
+                      ctrl: ctrl,
+                      initialMitarbeiter: sichtMitarbeiterName,
+                    ),
                     icon: const Icon(Icons.add),
                     label: Text(l.newAppointment),
                   ),
@@ -98,14 +93,12 @@ class TermineWochenansicht extends StatelessWidget {
                                 appointments: filtered,
                                 startHour: 8,
                                 endHour: 20,
-                                onTapEmptySlot: (slot) => isAdmin
-                                    ? openCreateTerminFlow(
-                                        context: context,
-                                        ctrl: ctrl,
-                                        presetStart: slot,
-                                        initialMitarbeiter: sichtMitarbeiterName,
-                                      )
-                                    : _noPerm(context),
+                                onTapEmptySlot: (slot) => openCreateTerminFlow(
+                                  context: context,
+                                  ctrl: ctrl,
+                                  presetStart: slot,
+                                  initialMitarbeiter: sichtMitarbeiterName,
+                                ),
                                 onDoubleTapTermin: (Termin t) async {
                                   await showTerminDetailsDialog(
                                     context: context,
@@ -121,8 +114,10 @@ class TermineWochenansicht extends StatelessWidget {
                                       );
                                       ctrl.moveTermin(t.id, newStart);
                                     },
-                                    onChangeDuration: (m) => ctrl.updateDuration(t.id, m),
-                                    onToggleStatus: () => ctrl.toggleStatus(t.id),
+                                    onChangeDuration: (m) =>
+                                        ctrl.updateDuration(t.id, m),
+                                    onToggleStatus: () =>
+                                        ctrl.toggleStatus(t.id),
                                     onCancel: () => ctrl.cancelTermin(t.id),
                                     onDelete: () => ctrl.deleteTermin(t.id),
                                   );

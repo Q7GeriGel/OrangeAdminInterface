@@ -34,14 +34,15 @@ class TerminplanService {
     final monday = mondayOf(slotStart);
     final list = await ladeWoche(monday);
 
-    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(mitarbeiterName);
+    final normalizedMitarbeiter =
+        StaffConfig.normalizeEmployee(mitarbeiterName);
 
     final id = 'new_${DateTime.now().millisecondsSinceEpoch}';
     final t = Termin(
       id: id,
       start: slotStart,
       end: slotStart.add(Duration(minutes: minutes)),
-      kundeName: kundeName.trim(),
+      kundeName: kundeName,
       mitarbeiterName: normalizedMitarbeiter,
       status: status,
       service: service,
