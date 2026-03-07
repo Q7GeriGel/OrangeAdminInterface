@@ -12,10 +12,23 @@ class StaffConfig {
     'Samet': Color(0xFF335776),
   };
 
-  static Color colorOf(String name) {
-    final n = name.trim();
-    return _colors[n] ?? _colors[defaultEmployee]!;
+  static String normalizeEmployee(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return defaultEmployee;
+
+    final normalized =
+        trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
+
+    return employees.contains(normalized) ? normalized : defaultEmployee;
   }
 
-  static bool isValid(String name) => employees.contains(name.trim());
+  static Color colorOf(String name) {
+    final normalized = normalizeEmployee(name);
+    return _colors[normalized] ?? _colors[defaultEmployee]!;
+  }
+
+  static bool isValid(String name) {
+    final normalized = normalizeEmployee(name);
+    return employees.contains(normalized);
+  }
 }

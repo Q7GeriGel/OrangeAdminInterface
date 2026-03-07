@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../config/staff_config.dart';
 import '../models/termin.dart';
 import '../repositories/terminquelle.dart';
 
@@ -9,9 +11,9 @@ class TerminplanService {
 
   Future<List<Termin>> ladeWoche(DateTime monday) => quelle.ladeWoche(monday);
 
-  Future<void> speichereWoche(DateTime monday, List<Termin> termine) => quelle.speichereWoche(monday, termine);
+  Future<void> speichereWoche(DateTime monday, List<Termin> termine) =>
+      quelle.speichereWoche(monday, termine);
 
-  // Helper: findet Montag der Woche
   DateTime mondayOf(DateTime d) {
     final dd = DateTime(d.year, d.month, d.day);
     final diff = dd.weekday - DateTime.monday;
@@ -22,7 +24,7 @@ class TerminplanService {
     DateTime slotStart, {
     int minutes = 30,
     String kundeName = 'Neuer Kunde',
-    String mitarbeiterName = 'Serkan', // ✅ FIX (war Aylin)
+    String mitarbeiterName = 'Serkan',
     String status = Termin.statusOffen,
     String? service,
     double? price,
@@ -32,18 +34,20 @@ class TerminplanService {
     final monday = mondayOf(slotStart);
     final list = await ladeWoche(monday);
 
+    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(mitarbeiterName);
+
     final id = 'new_${DateTime.now().millisecondsSinceEpoch}';
     final t = Termin(
       id: id,
       start: slotStart,
       end: slotStart.add(Duration(minutes: minutes)),
-      kundeName: kundeName,
-      mitarbeiterName: mitarbeiterName,
+      kundeName: kundeName.trim(),
+      mitarbeiterName: normalizedMitarbeiter,
       status: status,
       service: service,
       price: price,
       notes: notes,
-      color: color,
+      color: color ?? StaffConfig.colorOf(normalizedMitarbeiter),
     );
 
     list.add(t);
@@ -72,6 +76,8 @@ class TerminplanService {
     list[idx] = old.copyWith(
       start: newStart,
       end: newStart.add(dur),
+      mitarbeiterName: StaffConfig.normalizeEmployee(old.mitarbeiterName),
+      color: old.color ?? StaffConfig.colorOf(old.mitarbeiterName),
     );
 
     list.sort((a, b) => a.start.compareTo(b.start));
@@ -87,6 +93,8 @@ class TerminplanService {
     final old = list[idx];
     list[idx] = old.copyWith(
       end: old.start.add(Duration(minutes: minutes)),
+      mitarbeiterName: StaffConfig.normalizeEmployee(old.mitarbeiterName),
+      color: old.color ?? StaffConfig.colorOf(old.mitarbeiterName),
     );
 
     list.sort((a, b) => a.start.compareTo(b.start));

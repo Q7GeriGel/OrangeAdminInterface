@@ -100,6 +100,20 @@ class DashboardPage extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                IconButton(
+                                  tooltip: t.refreshToday,
+                                  onPressed: () {
+                                    ctrl.goToday();
+                                    messenger.showSnackBar(
+                                      SnackBar(content: Text(t.refreshed)),
+                                    );
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+                                  splashRadius: 18,
+                                  icon: Icon(Icons.refresh, size: 18, color: scheme.onSurface),
+                                ),
+                                const SizedBox(width: 6),
                                 const Icon(Icons.today, size: 18, color: _orange),
                                 const SizedBox(width: 8),
                                 Text(
@@ -132,16 +146,6 @@ class DashboardPage extends StatelessWidget {
                                 icon: const Icon(Icons.person_add),
                                 label: Text(t.newCustomer),
                               ),
-                              IconButton(
-                                tooltip: t.refreshToday,
-                                onPressed: () {
-                                  ctrl.goToday();
-                                  messenger.showSnackBar(
-                                    SnackBar(content: Text(t.refreshed)),
-                                  );
-                                },
-                                icon: Icon(Icons.refresh, color: scheme.onSurface),
-                              ),
                             ],
                           ),
                         ],
@@ -157,8 +161,6 @@ class DashboardPage extends StatelessWidget {
                         ),
                   ),
                   const SizedBox(height: 14),
-
-                  // KPI Grid (wie vorher)
                   LayoutBuilder(
                     builder: (context, c) {
                       final w = c.maxWidth;
@@ -227,10 +229,7 @@ class DashboardPage extends StatelessWidget {
                       );
                     },
                   ),
-
                   const SizedBox(height: 18),
-
-                  // 3 Dashboard-Boxen (wie vorher, mit genug Platz!)
                   LayoutBuilder(
                     builder: (context, c) {
                       final w = c.maxWidth;
@@ -258,7 +257,6 @@ class DashboardPage extends StatelessWidget {
                       );
                     },
                   ),
-
                   const SizedBox(height: 22),
                 ],
               ),

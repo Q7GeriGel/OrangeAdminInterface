@@ -261,6 +261,16 @@ Future<void> openCreateTerminFlow({
     status: res.status,
   );
 
+  if (!context.mounted) return;
+
+  await context.read<KundenVerwaltung>().erstelleKundeFallsFehlt(
+        name: res.kundeName,
+        bevorzugterFriseur: res.mitarbeiterName,
+        naechsterTermin: res.start,
+      );
+
+  if (!context.mounted) return;
+
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(t.successAppointmentSaved)),
   );
