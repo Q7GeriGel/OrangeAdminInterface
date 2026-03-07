@@ -446,4 +446,16 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get boxFreeSlotsTodayEmpty => 'Bugün boş slot yok';
+
+  @override
+  String get duration => 'Süre';
+
+  @override
+  String get phoneOptional => 'Telefon (opsiyonel)';
+
+  @override
+  String get preferredEmployee => 'Tercih edilen çalışan';
+
+  @override
+  String get regularCustomer => 'Düzenli müşteri';
 }

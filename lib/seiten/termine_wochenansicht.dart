@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
-
 import '../controllers/terminplan_controller.dart';
-import '../models/termin.dart';
+import '../l10n/gen/app_localizations.dart';
 
 import '../widgets/kalender/weekly_header.dart';
 import '../widgets/kalender/weekly_grid.dart';
 import '../widgets/kalender/termin_details_dialog.dart';
 import '../widgets/kalender/termin_create_dialog.dart';
+import '../models/termin.dart';
 
 class TermineWochenansicht extends StatelessWidget {
   final bool isAdmin;
@@ -40,7 +39,8 @@ class TermineWochenansicht extends StatelessWidget {
     final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
     final inner = isDark ? const Color(0xFF141D27) : Colors.white;
 
-    final filtered = ctrl.termine.where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName)).toList();
+    final filtered =
+        ctrl.termine.where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName)).toList();
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -55,10 +55,7 @@ class TermineWochenansicht extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '${l.appointmentsOverview} • $sichtMitarbeiterName',
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w900,
-                      ),
+                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
                     ),
                   ),
                   OutlinedButton.icon(
@@ -66,7 +63,7 @@ class TermineWochenansicht extends StatelessWidget {
                         ? () => openCreateTerminFlow(
                               context: context,
                               ctrl: ctrl,
-                              initialMitarbeiter: sichtMitarbeiterName, // ✅ FIX
+                              initialMitarbeiter: sichtMitarbeiterName,
                             )
                         : () => _noPerm(context),
                     icon: const Icon(Icons.add),
@@ -106,7 +103,7 @@ class TermineWochenansicht extends StatelessWidget {
                                         context: context,
                                         ctrl: ctrl,
                                         presetStart: slot,
-                                        initialMitarbeiter: sichtMitarbeiterName, // ✅ FIX
+                                        initialMitarbeiter: sichtMitarbeiterName,
                                       )
                                     : _noPerm(context),
                                 onDoubleTapTermin: (Termin t) async {
@@ -120,11 +117,11 @@ class TermineWochenansicht extends StatelessWidget {
                                         t.start.month,
                                         t.start.day,
                                         newTime.hour,
-                                        newTime.minute,
+                                        newTime.minute >= 30 ? 30 : 0,
                                       );
                                       ctrl.moveTermin(t.id, newStart);
                                     },
-                                    onChangeDuration: (minutes) => ctrl.updateDuration(t.id, minutes),
+                                    onChangeDuration: (m) => ctrl.updateDuration(t.id, m),
                                     onToggleStatus: () => ctrl.toggleStatus(t.id),
                                     onCancel: () => ctrl.cancelTermin(t.id),
                                     onDelete: () => ctrl.deleteTermin(t.id),

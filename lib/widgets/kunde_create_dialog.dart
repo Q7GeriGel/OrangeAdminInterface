@@ -1,183 +1,179 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../controllers/kunden_verwaltung.dart';
+import '../models/kunde.dart';
+import '../l10n/gen/app_localizations.dart';
 
 class KundeCreateResult {
   final String name;
   final String? telefon;
-  final String? email;
-  final String? notiz;
+  final bool stammkunde;
+  final String bevorzugterFriseur;
 
   const KundeCreateResult({
     required this.name,
     this.telefon,
-    this.email,
-    this.notiz,
+    required this.stammkunde,
+    required this.bevorzugterFriseur,
   });
 }
 
 Future<KundeCreateResult?> showCreateKundeDialog({
   required BuildContext context,
 }) async {
+  final t = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
 
   final nameCtrl = TextEditingController();
   final telCtrl = TextEditingController();
-  final emailCtrl = TextEditingController();
-  final noteCtrl = TextEditingController();
 
   bool saving = false;
+  bool stamm = false;
+  String friseur = KundenVerwaltung.allowedMitarbeiter.first;
 
-  bool isValidEmail(String s) {
-    if (s.trim().isEmpty) return true; // optional
-    final r = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-    return r.hasMatch(s.trim());
-  }
+  try {
+    final res = await showDialog<KundeCreateResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setState) {
+            Future<void> save() async {
+              final name = nameCtrl.text.trim();
+              final tel = telCtrl.text.trim();
 
-  return showDialog<KundeCreateResult>(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogCtx) {
-      return StatefulBuilder(
-        builder: (dialogCtx, setState) {
-          Future<void> save() async {
-            final name = nameCtrl.text.trim();
-            final tel = telCtrl.text.trim();
-            final email = emailCtrl.text.trim();
-            final note = noteCtrl.text.trim();
+              if (name.isEmpty) {
+                messenger.showSnackBar(SnackBar(content: Text(t.customerRequired)));
+                return;
+              }
 
-            if (name.isEmpty) {
-              messenger.showSnackBar(
-                const SnackBar(content: Text('Bitte Namen eingeben.')),
+              setState(() => saving = true);
+              await Future<void>.delayed(const Duration(milliseconds: 120));
+              if (!dialogCtx.mounted) return;
+              setState(() => saving = false);
+
+              Navigator.pop(
+                dialogCtx,
+                KundeCreateResult(
+                  name: name,
+                  telefon: tel.isEmpty ? null : tel,
+                  stammkunde: stamm,
+                  bevorzugterFriseur: friseur,
+                ),
               );
-              return;
             }
 
-            if (!isValidEmail(email)) {
-              messenger.showSnackBar(
-                const SnackBar(content: Text('E-Mail Format passt nicht.')),
-              );
-              return;
-            }
-
-            setState(() => saving = true);
-
-            // kein await nötig (nur UI) – aber wir halten das Muster konsistent
-            await Future<void>.delayed(const Duration(milliseconds: 120));
-
-            setState(() => saving = false);
-
-            Navigator.pop(
-              dialogCtx,
-              KundeCreateResult(
-                name: name,
-                telefon: tel.isEmpty ? null : tel,
-                email: email.isEmpty ? null : email,
-                notiz: note.isEmpty ? null : note,
+            return AlertDialog(
+              title: Text(t.newCustomer),
+              content: SizedBox(
+                width: 520,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      textInputAction: TextInputAction.next,
+                      decoration: InputDecoration(
+                        labelText: t.customerName,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: telCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: t.phoneOptional,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: friseur,
+                      items: KundenVerwaltung.allowedMitarbeiter
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                          .toList(),
+                      onChanged: (v) => setState(() => friseur = v ?? friseur),
+                      decoration: InputDecoration(
+                        labelText: t.preferredEmployee,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      value: stamm,
+                      onChanged: (v) => setState(() => stamm = v),
+                      title: Text(t.regularCustomer),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
               ),
+              actions: [
+                TextButton(
+                  onPressed: saving ? null : () => Navigator.pop(dialogCtx),
+                  child: Text(t.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: saving ? null : save,
+                  child: saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(t.save),
+                ),
+              ],
             );
-          }
+          },
+        );
+      },
+    );
 
-          return AlertDialog(
-            title: const Text('Neuen Kunden anlegen'),
-            content: SizedBox(
-              width: 520,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameCtrl,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: 'Name',
-                      hintText: 'z.B. Lara Demir',
-                      prefixIcon: const Icon(Icons.person),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: telCtrl,
-                          keyboardType: TextInputType.phone,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'Telefon (optional)',
-                            hintText: 'z.B. 0664 1234567',
-                            prefixIcon: const Icon(Icons.phone),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          decoration: InputDecoration(
-                            labelText: 'E-Mail (optional)',
-                            hintText: 'z.B. lara@mail.at',
-                            prefixIcon: const Icon(Icons.email),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  TextField(
-                    controller: noteCtrl,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Notiz (optional)',
-                      hintText: 'z.B. Allergie, bevorzugter Mitarbeiter, etc.',
-                      prefixIcon: const Icon(Icons.notes),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: saving ? null : () => Navigator.pop(dialogCtx),
-                child: const Text('Abbrechen'),
-              ),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFCC5C4C)),
-                onPressed: saving ? null : save,
-                icon: saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save),
-                label: const Text('Speichern'),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
+    return res;
+  } finally {
+    nameCtrl.dispose();
+    telCtrl.dispose();
+  }
 }
 
-/// Flow-Funktion (wie beim Termin): Dialog öffnen + Feedback.
-/// (Speichern in Liste/Controller hängen wir danach an.)
+/// ✅ Flow-Funktion: Dialog öffnen + direkt in KundenVerwaltung speichern
 Future<void> openCreateKundeFlow({
   required BuildContext context,
 }) async {
+  final t = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
 
   final res = await showCreateKundeDialog(context: context);
   if (res == null) return;
+  if (!context.mounted) return;
 
-  messenger.showSnackBar(
-    SnackBar(content: Text('Kunde erstellt: ${res.name}')),
-  );
+  try {
+    final verwaltung = context.read<KundenVerwaltung>();
+
+    final kunde = Kunde(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: res.name,
+      telefonnummer: res.telefon ?? '',
+      stammkunde: res.stammkunde,
+      bevorzugterFriseur: res.bevorzugterFriseur,
+    );
+
+    await verwaltung.hinzufuegen(kunde);
+    if (!context.mounted) return;
+
+    messenger.showSnackBar(
+      SnackBar(content: Text('${res.name} ${t.saved}')),
+    );
+  } catch (e) {
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Kunden-Provider fehlt. In main.dart ChangeNotifierProvider<KundenVerwaltung> hinzufügen.',
+        ),
+      ),
+    );
+  }
 }

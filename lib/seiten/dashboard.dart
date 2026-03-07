@@ -56,7 +56,9 @@ class DashboardPage extends StatelessWidget {
 
       if (res == null) return;
 
-      verwaltung.hinzufuegen(res);
+      await verwaltung.hinzufuegen(res);
+      if (!context.mounted) return;
+
       messenger.showSnackBar(
         SnackBar(content: Text('${t.customerCreated} ${res.name}')),
       );
@@ -120,7 +122,7 @@ class DashboardPage extends StatelessWidget {
                                 onPressed: () => openCreateTerminFlow(
                                   context: context,
                                   ctrl: ctrl,
-                                  initialMitarbeiter: benutzername, // ✅ FIX
+                                  initialMitarbeiter: benutzername,
                                 ),
                                 icon: const Icon(Icons.add),
                                 label: Text(t.newAppointment),
@@ -155,6 +157,8 @@ class DashboardPage extends StatelessWidget {
                         ),
                   ),
                   const SizedBox(height: 14),
+
+                  // KPI Grid (wie vorher)
                   LayoutBuilder(
                     builder: (context, c) {
                       final w = c.maxWidth;
@@ -223,7 +227,10 @@ class DashboardPage extends StatelessWidget {
                       );
                     },
                   ),
+
                   const SizedBox(height: 18),
+
+                  // 3 Dashboard-Boxen (wie vorher, mit genug Platz!)
                   LayoutBuilder(
                     builder: (context, c) {
                       final w = c.maxWidth;
@@ -251,6 +258,7 @@ class DashboardPage extends StatelessWidget {
                       );
                     },
                   ),
+
                   const SizedBox(height: 22),
                 ],
               ),

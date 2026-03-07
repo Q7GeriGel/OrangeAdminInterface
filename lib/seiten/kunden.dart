@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
+
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
 import '../widgets/kunden_tabelle.dart';
@@ -24,7 +26,6 @@ class _KundenSeiteState extends State<KundenSeite> {
   void initState() {
     super.initState();
     sucheCtrl.addListener(() {
-      // ✅ globaler Provider
       context.read<KundenVerwaltung>().sucheSetzen(sucheCtrl.text);
     });
   }
@@ -35,81 +36,117 @@ class _KundenSeiteState extends State<KundenSeite> {
     super.dispose();
   }
 
-  Future<void> _filterDialog() async {
-    final verwaltung = context.read<KundenVerwaltung>();
+  Future<Kunde?> _openKundeDialog({
+    required List<String> friseure,
+    Kunde? initial,
+  }) {
+    return showDialog<Kunde>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => KundeDialog(
+        initial: initial,
+        friseure: friseure,
+      ),
+    );
+  }
+
+  Future<void> _filterDialog(KundenVerwaltung verwaltung) async {
+    final t = AppLocalizations.of(context)!;
 
     bool? nurStamm = verwaltung.nurStammkunden;
     String? friseur = verwaltung.friseur;
 
-    await showDialog(
+    await showDialog<void>(
       context: context,
-      builder: (c) {
+      builder: (ctx) {
         return StatefulBuilder(
-          builder: (context, setLocalState) {
+          builder: (ctx, setLocal) {
             return AlertDialog(
-              title: const Text('Filter'),
+              title: Text(t.filterTitle),
               content: SizedBox(
-                width: 420,
+                width: 520,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(children: [
-                      const SizedBox(width: 90, child: Text('Stammkunde:')),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButton<bool?>(
-                          value: nurStamm,
-                          isExpanded: true,
-                          items: const [
-                            DropdownMenuItem(value: null, child: Text('Egal')),
-                            DropdownMenuItem(value: true, child: Text('Nur Stammkunden')),
-                            DropdownMenuItem(value: false, child: Text('Nur Nicht-Stammkunden')),
-                          ],
-                          onChanged: (v) => setLocalState(() => nurStamm = v),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 160,
+                          child: Text(
+                            t.filterRegularLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
                         ),
-                      ),
-                    ]),
-                    const SizedBox(height: 12),
-                    Row(children: [
-                      const SizedBox(width: 90, child: Text('Friseur:')),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButton<String?>(
-                          value: friseur,
-                          isExpanded: true,
-                          items: [
-                            const DropdownMenuItem(value: null, child: Text('Egal')),
-                            ...verwaltung.friseure.map(
-                              (s) => DropdownMenuItem(value: s, child: Text(s)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: DropdownButtonFormField<bool?>(
+                            value: nurStamm,
+                            items: [
+                              DropdownMenuItem(value: null, child: Text(t.filterAny)),
+                              DropdownMenuItem(value: true, child: Text(t.filterOnlyRegulars)),
+                              DropdownMenuItem(value: false, child: Text(t.filterOnlyNonRegulars)),
+                            ],
+                            onChanged: (v) => setLocal(() => nurStamm = v),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                              isDense: true,
                             ),
-                          ],
-                          onChanged: (v) => setLocalState(() => friseur = v),
+                          ),
                         ),
-                      ),
-                    ]),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 160,
+                          child: Text(
+                            t.filterEmployeeLabel,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: DropdownButtonFormField<String?>(
+                            value: friseur,
+                            items: [
+                              DropdownMenuItem(value: null, child: Text(t.filterAny)),
+                              ...verwaltung.friseure.map(
+                                (s) => DropdownMenuItem(value: s, child: Text(s)),
+                              ),
+                            ],
+                            onChanged: (v) => setLocal(() => friseur = v),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Abbrechen'),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(t.cancel),
                 ),
                 TextButton(
                   onPressed: () {
-                    setLocalState(() {
+                    setLocal(() {
                       nurStamm = null;
                       friseur = null;
                     });
                   },
-                  child: const Text('Zurücksetzen'),
+                  child: Text(t.reset),
                 ),
                 FilledButton(
                   onPressed: () {
                     verwaltung.filterSetzen(nurStammkunden: nurStamm, friseur: friseur);
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                   },
-                  child: const Text('Übernehmen'),
+                  child: Text(t.apply),
                 ),
               ],
             );
@@ -119,215 +156,146 @@ class _KundenSeiteState extends State<KundenSeite> {
     );
   }
 
-  Future<void> _dialogHinzufuegenBearbeiten({Kunde? bearbeiten}) async {
-    final verwaltung = context.read<KundenVerwaltung>();
+  Future<bool> _confirmDelete(Kunde k) async {
+    final t = AppLocalizations.of(context)!;
 
-    final result = await showDialog<Kunde>(
+    final res = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (c) => KundeDialog(initial: bearbeiten, friseure: verwaltung.friseure),
+      builder: (ctx) => AlertDialog(
+        title: Text(t.confirmDeleteTitle),
+        content: Text(t.confirmDeleteCustomerText),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.cancel)),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t.delete),
+          ),
+        ],
+      ),
     );
-    if (result == null) return;
 
-    if (bearbeiten == null) {
-      verwaltung.hinzufuegen(result);
-    } else {
-      verwaltung.bearbeiten(result);
-    }
+    return res ?? false;
   }
 
-  Future<void> _naechstenTerminWaehlen(Kunde k) async {
-    final verwaltung = context.read<KundenVerwaltung>();
-
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: k.naechsterTermin ?? now,
-      firstDate: DateTime(now.year - 2),
-      lastDate: DateTime(now.year + 3),
-    );
-    if (picked != null) {
-      final u = k.kopie()..naechsterTermin = picked;
-      verwaltung.bearbeiten(u);
-    }
+  Future<void> _bearbeiten(KundenVerwaltung v, Kunde k) async {
+    final edited = await _openKundeDialog(friseure: v.friseure, initial: k);
+    if (edited == null) return;
+    await v.bearbeiten(edited);
   }
 
-  String? _activeFilterText(KundenVerwaltung verwaltung) {
-    final parts = <String>[];
+  Future<void> _neu(KundenVerwaltung v) async {
+    final neu = await _openKundeDialog(friseure: v.friseure);
+    if (neu == null) return;
+    await v.hinzufuegen(neu);
+  }
 
-    final stamm = verwaltung.nurStammkunden;
-    if (stamm == true) parts.add('Nur Stammkunden');
-    if (stamm == false) parts.add('Nur Nicht-Stammkunden');
-
-    final fr = verwaltung.friseur;
-    if (fr != null && fr.trim().isNotEmpty) parts.add('Friseur: $fr');
-
-    if (parts.isEmpty) return null;
-    return parts.join(' • ');
+  Future<void> _loeschen(KundenVerwaltung v, Kunde k) async {
+    final ok = await _confirmDelete(k);
+    if (!ok) return;
+    await v.loeschen(k.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(AppLocalizations.of(context)!.deletedCustomer)),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final verwaltung = context.watch<KundenVerwaltung>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final pageBg = isDark ? const Color(0xFF0B0F14) : const Color(0xFFECEDEE);
+    final kunden = verwaltung.kunden;
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pageBg = Theme.of(context).scaffoldBackgroundColor;
     final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
     final surface = isDark ? const Color(0xFF141D27) : Colors.white;
 
-    final activeFilters = _activeFilterText(verwaltung);
-
-    return Container(
-      color: pageBg,
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kunden',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
+    return Scaffold(
+      backgroundColor: pageBg,
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: panel,
+                borderRadius: BorderRadius.circular(22),
               ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: panel,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(isDark ? 40 : 10),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Material(
+                    color: surface,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  t.customersTitle,
+                                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                                ),
+                              ),
+                              SizedBox(
                                 height: topHeight,
-                                decoration: BoxDecoration(
-                                  color: surface,
-                                  borderRadius: BorderRadius.circular(topHeight / 2),
-                                  border: Border.all(
-                                    color: isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(10),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const SizedBox(width: 14),
-                                    Icon(Icons.search, size: 20, color: isDark ? Colors.white70 : Colors.black54),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: TextField(
-                                        controller: sucheCtrl,
-                                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                                        decoration: InputDecoration(
-                                          hintText: 'Suche bei Name, Telefonnummer oder Datum (dd.MM.yyyy)',
-                                          hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.black45),
-                                          border: InputBorder.none,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            SizedBox(
-                              width: topHeight,
-                              height: topHeight,
-                              child: ClipOval(
-                                child: Material(
-                                  color: Colors.white.withAlpha(isDark ? 18 : 35),
-                                  child: IconButton(
-                                    tooltip: 'Filter',
-                                    onPressed: _filterDialog,
-                                    icon: Icon(Icons.tune, color: isDark ? Colors.white : Colors.black),
+                                width: 420,
+                                child: TextField(
+                                  controller: sucheCtrl,
+                                  decoration: InputDecoration(
+                                    hintText: t.searchHintCustomers,
+                                    prefixIcon: const Icon(Icons.search),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                                    isDense: true,
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            FilledButton.icon(
-                              onPressed: () => _dialogHinzufuegenBearbeiten(),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFCC5C4C),
-                                minimumSize: const Size(0, topHeight),
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                shape: const StadiumBorder(),
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                height: topHeight,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _filterDialog(verwaltung),
+                                  icon: const Icon(Icons.filter_alt_outlined),
+                                  label: Text(t.filterTitle),
+                                ),
                               ),
-                              icon: const Icon(Icons.person_add),
-                              label: const Text('Neuer Kunde'),
-                            ),
-                          ],
-                        ),
-                        if (activeFilters != null) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            'Filter aktiv: $activeFilters',
-                            style: TextStyle(
-                              color: Colors.white.withAlpha(220),
-                              fontWeight: FontWeight.w700,
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                height: topHeight,
+                                child: FilledButton.icon(
+                                  onPressed: () => _neu(verwaltung),
+                                  icon: const Icon(Icons.add),
+                                  label: Text(t.newCustomer),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Expanded(
+                            child: KundenTabelle(
+                              kunden: kunden,
+                              datumFmt: datumFmt,
+                              onBearbeiten: (k) => _bearbeiten(verwaltung, k),
+                              onLoeschen: (k) => _loeschen(verwaltung, k),
+                              onTermin: (k) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('${t.pickNextAppointment}: ${k.name}')),
+                                );
+                              },
                             ),
                           ),
-                        ] else ...[
-                          const SizedBox(height: 12),
                         ],
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: surface,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(10),
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(18),
-                              child: DataTableTheme(
-                                data: DataTableThemeData(
-                                  dataTextStyle: TextStyle(
-                                    color: isDark ? Colors.white : Colors.black,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  headingTextStyle: TextStyle(
-                                    color: isDark ? Colors.white : Colors.black,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                  dividerThickness: 0.6,
-                                ),
-                                child: KundenTabelle(
-                                  kunden: verwaltung.kunden,
-                                  datumFmt: datumFmt,
-                                  onBearbeiten: (k) => _dialogHinzufuegenBearbeiten(bearbeiten: k),
-                                  onLoeschen: (k) => verwaltung.loeschen(k.id),
-                                  onTermin: _naechstenTerminWaehlen,
-                                  minLinien: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -61,4 +61,35 @@ class Termin {
       color: color ?? this.color,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'start': start.toIso8601String(),
+        'end': end.toIso8601String(),
+        'kundeName': kundeName,
+        'mitarbeiterName': mitarbeiterName,
+        'status': status,
+        'service': service,
+        'price': price,
+        'notes': notes,
+        'mitarbeiterId': mitarbeiterId,
+        'color': color?.value,
+      };
+
+  static Termin fromJson(Map<String, dynamic> j) {
+    final colorVal = j['color'];
+    return Termin(
+      id: (j['id'] ?? '').toString(),
+      start: DateTime.parse(j['start'] as String),
+      end: DateTime.parse(j['end'] as String),
+      kundeName: (j['kundeName'] ?? '').toString(),
+      mitarbeiterName: (j['mitarbeiterName'] ?? '').toString(),
+      status: (j['status'] ?? statusOffen).toString(),
+      service: j['service']?.toString(),
+      price: (j['price'] is num) ? (j['price'] as num).toDouble() : double.tryParse('${j['price']}'),
+      notes: j['notes']?.toString(),
+      mitarbeiterId: (j['mitarbeiterId'] is int) ? j['mitarbeiterId'] as int : int.tryParse('${j['mitarbeiterId']}'),
+      color: (colorVal is int) ? Color(colorVal) : null,
+    );
+  }
 }

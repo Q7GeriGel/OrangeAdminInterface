@@ -1,4 +1,3 @@
-
 class Kunde {
   String id;
   String name;
@@ -12,8 +11,8 @@ class Kunde {
     required this.id,
     required this.name,
     required this.telefonnummer,
-    this.stammkunde = false,
-    this.bevorzugterFriseur = '',
+    required this.stammkunde,
+    required this.bevorzugterFriseur,
     this.letzterHaarschnitt,
     this.naechsterTermin,
   });
@@ -26,5 +25,29 @@ class Kunde {
         bevorzugterFriseur: bevorzugterFriseur,
         letzterHaarschnitt: letzterHaarschnitt,
         naechsterTermin: naechsterTermin,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'telefonnummer': telefonnummer,
+        'stammkunde': stammkunde,
+        'bevorzugterFriseur': bevorzugterFriseur,
+        'letzterHaarschnitt': letzterHaarschnitt?.toIso8601String(),
+        'naechsterTermin': naechsterTermin?.toIso8601String(),
+      };
+
+  static Kunde fromJson(Map<String, dynamic> j) => Kunde(
+        id: (j['id'] ?? '').toString(),
+        name: (j['name'] ?? '').toString(),
+        telefonnummer: (j['telefonnummer'] ?? '').toString(),
+        stammkunde: (j['stammkunde'] == true),
+        bevorzugterFriseur: (j['bevorzugterFriseur'] ?? '').toString(),
+        letzterHaarschnitt: (j['letzterHaarschnitt'] is String && (j['letzterHaarschnitt'] as String).isNotEmpty)
+            ? DateTime.tryParse(j['letzterHaarschnitt'] as String)
+            : null,
+        naechsterTermin: (j['naechsterTermin'] is String && (j['naechsterTermin'] as String).isNotEmpty)
+            ? DateTime.tryParse(j['naechsterTermin'] as String)
+            : null,
       );
 }

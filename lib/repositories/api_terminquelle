@@ -1,0 +1,55 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+import '../config/app_config.dart';
+import '../models/termin.dart';
+import 'terminquelle.dart';
+
+class ApiTerminquelle implements Terminquelle {
+  final http.Client _client;
+
+  ApiTerminquelle({http.Client? client}) : _client = client ?? http.Client();
+
+  String _fmtYmd(DateTime d) {
+    final y = d.year.toString().padLeft(4, '0');
+    final m = d.month.toString().padLeft(2, '0');
+    final day = d.day.toString().padLeft(2, '0');
+    return '$y-$m-$day';
+  }
+
+  Uri _weekUri(DateTime monday) {
+    final mondayLocal = DateTime(monday.year, monday.month, monday.day);
+    final ymd = _fmtYmd(mondayLocal);
+    return Uri.parse('${AppConfig.apiBaseUrl}/api/termine/week/$ymd');
+  }
+
+  @override
+  Future<List<Termin>> ladeWoche(DateTime monday) async {
+    final uri = _weekUri(monday);
+    final res = await _client.get(uri, headers: {'Accept': 'application/json'}).timeout(
+      const Duration(seconds: 10),
+    );
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('API ladeWoche failed (${res.statusCode}): ${res.body}');
+    }
+
+    final data = jsonDecode(res.body);
+    if (data is! List) return [];
+    return data.map((e) => Termin.fromJson((e as Map).cast<String, dynamic>())).toList();
+  }
+
+  @override
+  Future<void> speichereWoche(DateTime monday, List<Termin> termine) async {
+    final uri = _weekUri(monday);
+    final body = jsonEncode(termine.map((t) => t.toJson()).toList());
+
+    final res = await _client
+        .put(uri, headers: {'Content-Type': 'application/json'}, body: body)
+        .timeout(const Duration(seconds: 12));
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('API speichereWoche failed (${res.statusCode}): ${res.body}');
+    }
+  }
+}

@@ -35,12 +35,12 @@ class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
-          backgroundColor: MaterialStateProperty.all(AppColors.orange),
-          foregroundColor: MaterialStateProperty.all(Colors.white),
-          padding: MaterialStateProperty.all(
+          backgroundColor: WidgetStateProperty.all(AppColors.orange),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          padding: WidgetStateProperty.all(
             const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
-          shape: MaterialStateProperty.all(
+          shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadii.r14),
             ),
@@ -63,7 +63,6 @@ class AppTheme {
       primary: AppColors.orange,
       secondary: AppColors.bluePanel,
       surface: surface,
-      background: bg,
     );
 
     return ThemeData(
@@ -95,20 +94,20 @@ class AppTheme {
 
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
-          backgroundColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.selected)) {
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
               return AppColors.orange.withOpacity(0.22);
             }
             return surface2;
           }),
-          foregroundColor: MaterialStateProperty.resolveWith((states) {
-            if (states.contains(MaterialState.selected)) return Colors.white;
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return Colors.white;
             return Colors.white.withOpacity(0.80);
           }),
-          side: MaterialStateProperty.all(
+          side: WidgetStateProperty.all(
             BorderSide(color: scheme.outlineVariant.withOpacity(0.35)),
           ),
-          shape: MaterialStateProperty.all(
+          shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadii.r14),
             ),
@@ -118,12 +117,12 @@ class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
-          backgroundColor: MaterialStateProperty.all(AppColors.orange),
-          foregroundColor: MaterialStateProperty.all(Colors.white),
-          padding: MaterialStateProperty.all(
+          backgroundColor: WidgetStateProperty.all(AppColors.orange),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          padding: WidgetStateProperty.all(
             const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           ),
-          shape: MaterialStateProperty.all(
+          shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppRadii.r14),
             ),

@@ -16,6 +16,7 @@ dependencies:
   intl: any
   provider: ^6.1.2
   shared_preferences: ^2.2.3
+  http: ^1.2.2
 
   # Charts (Statistik)
   fl_chart: ^1.1.1

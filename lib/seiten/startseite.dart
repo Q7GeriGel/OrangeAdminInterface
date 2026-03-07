@@ -25,37 +25,18 @@ class Startseite extends StatefulWidget {
 class _StartseiteState extends State<Startseite> {
   int _index = 0;
 
-  // ✅ “Ansicht”-Account (nur Admin kann wechseln)
-  late String _aktiverAccount;
-
-  @override
-  void initState() {
-    super.initState();
-    _aktiverAccount = widget.benutzername;
-  }
-
-  void _setAktiverAccount(String u) {
-    if (!widget.isAdmin) return;
-    setState(() => _aktiverAccount = u);
-  }
-
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      DashboardPage(benutzername: _aktiverAccount),
+      DashboardPage(benutzername: widget.benutzername),
       const KundenSeite(),
-      MitarbeiterSeite(
-        benutzername: widget.benutzername,
-        isAdmin: widget.isAdmin,
-        aktiverAccount: _aktiverAccount,
-        onAccountChanged: _setAktiverAccount,
-      ),
+      MitarbeiterSeite(benutzername: widget.benutzername),
       TermineWochenansicht(
         isAdmin: widget.isAdmin,
-        sichtMitarbeiterName: _aktiverAccount,
+        sichtMitarbeiterName: widget.benutzername,
       ),
       StatistikSeite(
-        angemeldeterName: _aktiverAccount,
+        angemeldeterName: widget.benutzername,
         isAdmin: widget.isAdmin,
       ),
       const EinstellungSeite(),
@@ -103,7 +84,6 @@ class _Rail extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-
             _NavItem(
               icon: Icons.dashboard_outlined,
               text: t.dashboard,
@@ -140,7 +120,6 @@ class _Rail extends StatelessWidget {
               selected: index == 5,
               onTap: () => onChanged(5),
             ),
-
             const Spacer(),
             Padding(
               padding: const EdgeInsets.all(14),

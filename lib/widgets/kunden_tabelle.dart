@@ -47,20 +47,23 @@ class _KundenTabelleState extends State<KundenTabelle> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
 
+    // Spaltenbreiten (Content)
     const nameW = 220.0;
     const telW = 220.0;
     const stammW = 120.0;
     const friseurW = 180.0;
     const letzterW = 120.0;
     const nextW = 140.0;
-    const actionsW = 120.0;
+    const actionsW = 180.0;
+
+    // ✅ WICHTIG: Padding muss in der Gesamtbreite drin sein, sonst Overflow-Stripes!
+    const sidePad = 16.0;
 
     const rowH = 56.0;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
 
-    // ✅ Farben (schwarze Schrift -> weiß im Dark; "weiß" -> dunkler / nicer)
     final headerBg = isDark ? const Color(0xFF0F131B) : const Color(0xFFF2F4F7);
     final rowBg = isDark ? const Color(0xFF141D27) : Colors.white;
     final rowAltBg = isDark ? const Color(0xFF111821) : const Color(0xFFF9FAFB);
@@ -90,11 +93,21 @@ class _KundenTabelleState extends State<KundenTabelle> {
 
     return LayoutBuilder(
       builder: (context, c) {
-        final minTableWidth = nameW + telW + stammW + friseurW + letzterW + nextW + actionsW;
+        // Content-Breite ohne Padding
+        final contentW = nameW + telW + stammW + friseurW + letzterW + nextW + actionsW;
+        // ✅ Gesamtbreite inkl Padding links+rechts
+        final minTableWidth = contentW + sidePad * 2;
+
         final tableWidth = math.max(c.maxWidth, minTableWidth);
 
         Widget headerCell(String text, double w, {Alignment a = Alignment.centerLeft}) {
-          return SizedBox(width: w, child: Align(alignment: a, child: Text(text, style: headerStyle)));
+          return SizedBox(
+            width: w,
+            child: Align(
+              alignment: a,
+              child: Text(text, style: headerStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          );
         }
 
         Widget dataCell(Widget child, double w, {Alignment a = Alignment.centerLeft}) {
@@ -115,7 +128,8 @@ class _KundenTabelleState extends State<KundenTabelle> {
               children: [
                 Container(
                   height: rowH,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  width: tableWidth, // ✅ wichtig: Row bekommt echte Breite
+                  padding: const EdgeInsets.symmetric(horizontal: sidePad),
                   color: bg,
                   child: Row(
                     children: [
@@ -129,7 +143,9 @@ class _KundenTabelleState extends State<KundenTabelle> {
                                 size: 20,
                                 color: k.stammkunde
                                     ? const Color(0xFF2E7D32)
-                                    : (isDark ? Colors.white.withAlpha(140) : Colors.black.withAlpha(120)),
+                                    : (isDark
+                                        ? Colors.white.withAlpha(140)
+                                        : Colors.black.withAlpha(120)),
                               ),
                         stammW,
                         a: Alignment.center,
@@ -180,7 +196,8 @@ class _KundenTabelleState extends State<KundenTabelle> {
             children: [
               Container(
                 height: rowH,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                width: tableWidth, // ✅ wichtig
+                padding: const EdgeInsets.symmetric(horizontal: sidePad),
                 decoration: BoxDecoration(
                   color: headerBg,
                   border: Border(bottom: BorderSide(color: headerDivider)),
@@ -189,7 +206,11 @@ class _KundenTabelleState extends State<KundenTabelle> {
                   children: [
                     headerCell(t.tableName, nameW),
                     headerCell(t.tablePhone, telW),
-                    headerCell(t.filterRegularLabel.replaceAll(':', ''), stammW, a: Alignment.center),
+                    headerCell(
+                      t.filterRegularLabel.replaceAll(':', ''),
+                      stammW,
+                      a: Alignment.center,
+                    ),
                     headerCell(t.tableStaff, friseurW),
                     headerCell(t.tableLastVisit, letzterW),
                     headerCell(t.tableNextAppointment, nextW),
@@ -213,7 +234,6 @@ class _KundenTabelleState extends State<KundenTabelle> {
         return Scrollbar(
           controller: _hCtrl,
           thumbVisibility: tableWidth > c.maxWidth,
-          notificationPredicate: (n) => n.depth == 0,
           child: SingleChildScrollView(
             controller: _hCtrl,
             scrollDirection: Axis.horizontal,

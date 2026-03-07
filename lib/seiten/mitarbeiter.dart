@@ -4,21 +4,13 @@ import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
 import '../widgets/app_page.dart';
 import '../widgets/theme/app_tokens.dart';
-import '../widgets/account_panel.dart';
 
 class MitarbeiterSeite extends StatefulWidget {
   final String benutzername;
 
-  final bool isAdmin;
-  final String aktiverAccount;
-  final ValueChanged<String> onAccountChanged;
-
   const MitarbeiterSeite({
     super.key,
     required this.benutzername,
-    required this.isAdmin,
-    required this.aktiverAccount,
-    required this.onAccountChanged,
   });
 
   @override
@@ -104,13 +96,7 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
           ),
           const SizedBox(height: AppGaps.s18),
 
-          AccountPanel(
-            isAdmin: widget.isAdmin,
-            selected: widget.aktiverAccount,
-            onChanged: widget.onAccountChanged,
-          ),
-
-          if (widget.isAdmin) const SizedBox(height: AppGaps.s18),
+          // ✅ HESAP / ACCOUNT PANEL KOMPLETT ENTFERNT
 
           Expanded(
             child: ClipRRect(
@@ -217,13 +203,13 @@ class _UserHeaderCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadii.r22),
       child: Container(
         color: cardBg,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        padding: const EdgeInsets.all(AppGaps.s18),
         child: Row(
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundColor: AppColors.orangeSoft,
-              child: const Icon(Icons.person, color: AppColors.orange),
+              backgroundColor: const Color(0xFFFFE0D7),
+              child: Icon(Icons.person, color: Colors.black.withAlpha(160)),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -233,13 +219,19 @@ class _UserHeaderCard extends StatelessWidget {
                   Text(
                     benutzername,
                     style: TextStyle(
+                      fontWeight: FontWeight.w900,
                       fontSize: 22,
-                      fontWeight: FontWeight.w800,
                       color: title,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: sub)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: sub,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -268,8 +260,7 @@ class _InnerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final divider = isDark ? Colors.white.withAlpha(18) : Colors.black12;
-    final titleColor = isDark ? Colors.white : Colors.black;
+    final border = isDark ? Colors.white.withAlpha(16) : Colors.black.withAlpha(10);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.r18),
@@ -277,27 +268,25 @@ class _InnerPanel extends StatelessWidget {
         color: background,
         child: Column(
           children: [
-            Padding(
+            Container(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: border)),
+              ),
               child: Row(
                 children: [
-                  Icon(titleIcon, color: AppColors.orange),
+                  Icon(titleIcon, color: const Color(0xFFC95B4C)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       title,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: titleColor,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
                     ),
                   ),
                   if (topRight != null) topRight!,
                 ],
               ),
             ),
-            Divider(height: 1, color: divider),
             Expanded(child: child),
           ],
         ),
@@ -323,30 +312,32 @@ class _SlotTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = isDark ? Colors.white.withAlpha(20) : Colors.black12;
+    final bg = isDark ? const Color(0xFF141D27) : const Color(0xFFF5F6F8);
+    final border = isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(10);
     final text = isDark ? Colors.white : Colors.black;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: border),
       ),
       child: Row(
         children: [
           Container(
             width: 6,
-            height: 26,
+            height: 24,
             decoration: BoxDecoration(
-              color: AppColors.bluePanel,
-              borderRadius: BorderRadius.circular(AppRadii.pill),
+              color: const Color(0xFF335776),
+              borderRadius: BorderRadius.circular(99),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               time,
-              style: TextStyle(fontWeight: FontWeight.w800, color: text),
+              style: TextStyle(fontWeight: FontWeight.w900, color: text),
             ),
           ),
           Container(

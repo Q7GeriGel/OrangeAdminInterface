@@ -446,4 +446,16 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get boxFreeSlotsTodayEmpty => 'Heute keine freien Slots';
+
+  @override
+  String get duration => 'Dauer';
+
+  @override
+  String get phoneOptional => 'Telefon (optional)';
+
+  @override
+  String get preferredEmployee => 'Bevorzugter Mitarbeiter';
+
+  @override
+  String get regularCustomer => 'Stammkunde';
 }

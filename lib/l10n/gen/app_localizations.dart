@@ -961,6 +961,30 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Heute keine freien Slots'**
   String get boxFreeSlotsTodayEmpty;
+
+  /// No description provided for @duration.
+  ///
+  /// In de, this message translates to:
+  /// **'Dauer'**
+  String get duration;
+
+  /// No description provided for @phoneOptional.
+  ///
+  /// In de, this message translates to:
+  /// **'Telefon (optional)'**
+  String get phoneOptional;
+
+  /// No description provided for @preferredEmployee.
+  ///
+  /// In de, this message translates to:
+  /// **'Bevorzugter Mitarbeiter'**
+  String get preferredEmployee;
+
+  /// No description provided for @regularCustomer.
+  ///
+  /// In de, this message translates to:
+  /// **'Stammkunde'**
+  String get regularCustomer;
 }
 
 class _AppLocalizationsDelegate

@@ -78,7 +78,7 @@ class SlotCell extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: AppointmentBlock(
-                    a: main!,
+                    a: main,
                     onDoubleTap: onOpenDetails,
                   ),
                 ),
