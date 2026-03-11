@@ -14,6 +14,7 @@ import '../dashboard/box_freie_zeitfenster.dart';
 
 import '../widgets/kalender/termin_create_dialog.dart';
 import '../widgets/kunde_dialog.dart';
+import '../config/staff_config.dart';
 
 class DashboardPage extends StatelessWidget {
   final String benutzername;
@@ -50,7 +51,7 @@ class DashboardPage extends StatelessWidget {
         barrierDismissible: false,
         builder: (c) => KundeDialog(
           initial: null,
-          friseure: verwaltung.friseure,
+          friseure: StaffConfig.allEmployees,
         ),
       );
 

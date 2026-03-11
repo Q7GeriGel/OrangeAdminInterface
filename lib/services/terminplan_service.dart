@@ -20,6 +20,17 @@ class TerminplanService {
     return dd.subtract(Duration(days: diff));
   }
 
+  DateTime _snapToHalfHour(DateTime value) {
+    final clean = DateTime(value.year, value.month, value.day, value.hour, value.minute);
+    final remainder = clean.minute % 30;
+
+    if (remainder == 0) {
+      return clean;
+    }
+
+    return clean.add(Duration(minutes: 30 - remainder));
+  }
+
   Future<Termin> createTerminAt(
     DateTime slotStart, {
     int minutes = 30,
@@ -31,17 +42,17 @@ class TerminplanService {
     String? notes,
     Color? color,
   }) async {
-    final monday = mondayOf(slotStart);
+    final normalizedStart = _snapToHalfHour(slotStart);
+    final monday = mondayOf(normalizedStart);
     final list = await ladeWoche(monday);
 
-    final normalizedMitarbeiter =
-        StaffConfig.normalizeEmployee(mitarbeiterName);
+    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(mitarbeiterName);
 
     final id = 'new_${DateTime.now().millisecondsSinceEpoch}';
     final t = Termin(
       id: id,
-      start: slotStart,
-      end: slotStart.add(Duration(minutes: minutes)),
+      start: normalizedStart,
+      end: normalizedStart.add(Duration(minutes: minutes)),
       kundeName: kundeName,
       mitarbeiterName: normalizedMitarbeiter,
       status: status,

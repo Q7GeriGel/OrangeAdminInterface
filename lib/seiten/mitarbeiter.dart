@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
+import '../config/staff_config.dart';
 import '../widgets/app_page.dart';
 import '../widgets/theme/app_tokens.dart';
 
 class MitarbeiterSeite extends StatefulWidget {
   final String benutzername;
+  final bool isAdmin;
 
   const MitarbeiterSeite({
     super.key,
     required this.benutzername,
+    required this.isAdmin,
   });
 
   @override
@@ -21,12 +24,12 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
   final TextEditingController _notesController = TextEditingController();
 
   final List<String> freieSlots = const [
-    "08:00 – 08:30",
-    "08:30 – 09:00",
-    "09:00 – 09:30",
-    "10:00 – 10:30",
-    "10:30 – 11:00",
-    "11:00 – 11:30"
+    '08:00 – 08:30',
+    '08:30 – 09:00',
+    '09:00 – 09:30',
+    '10:00 – 10:30',
+    '10:30 – 11:00',
+    '11:00 – 11:30',
   ];
 
   String get _notesKey => 'notes_${widget.benutzername.toLowerCase()}';
@@ -53,7 +56,7 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
 
   Future<void> _loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
-    final txt = prefs.getString(_notesKey) ?? "";
+    final txt = prefs.getString(_notesKey) ?? '';
     if (!mounted) return;
 
     final t = AppLocalizations.of(context)!;
@@ -72,6 +75,23 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(t.notesSaved)),
     );
+  }
+
+  Future<void> _neuenMitarbeiterAnlegen() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _CreateEmployeeDialog(),
+    );
+
+    if (result == true && mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mitarbeiter erfolgreich angelegt.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -93,11 +113,15 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
           _UserHeaderCard(
             benutzername: widget.benutzername,
             subtitle: t.employeesSubtitle,
+            trailing: widget.isAdmin
+                ? FilledButton.icon(
+                    onPressed: _neuenMitarbeiterAnlegen,
+                    icon: const Icon(Icons.person_add_alt_1),
+                    label: const Text('Neuer Mitarbeiter'),
+                  )
+                : null,
           ),
           const SizedBox(height: AppGaps.s18),
-
-          // ✅ HESAP / ACCOUNT PANEL KOMPLETT ENTFERNT
-
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadii.r22),
@@ -182,13 +206,125 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
   }
 }
 
+class _CreateEmployeeDialog extends StatefulWidget {
+  const _CreateEmployeeDialog();
+
+  @override
+  State<_CreateEmployeeDialog> createState() => _CreateEmployeeDialogState();
+}
+
+class _CreateEmployeeDialogState extends State<_CreateEmployeeDialog> {
+  final TextEditingController _usernameCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
+
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final username = _usernameCtrl.text.trim().toLowerCase();
+    final password = _passwordCtrl.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte Benutzername und Passwort eingeben.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    final error = await StaffConfig.createEmployee(
+      username: username,
+      password: password,
+    );
+
+    if (!mounted) return;
+    setState(() => _saving = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Neuen Mitarbeiter anlegen'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _usernameCtrl,
+              textInputAction: TextInputAction.next,
+              enabled: !_saving,
+              decoration: InputDecoration(
+                labelText: 'Benutzername',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: true,
+              enabled: !_saving,
+              onSubmitted: (_) => _save(),
+              decoration: InputDecoration(
+                labelText: 'Passwort',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Erstellen'),
+        ),
+      ],
+    );
+  }
+}
+
 class _UserHeaderCard extends StatelessWidget {
   final String benutzername;
   final String subtitle;
+  final Widget? trailing;
 
   const _UserHeaderCard({
     required this.benutzername,
     required this.subtitle,
+    this.trailing,
   });
 
   @override
@@ -235,6 +371,10 @@ class _UserHeaderCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: 14),
+              trailing!,
+            ],
           ],
         ),
       ),
@@ -343,7 +483,8 @@ class _SlotTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: (statusIsFree ? AppColors.orange : Colors.black).withAlpha(isDark ? 28 : 15),
+              color: (statusIsFree ? AppColors.orange : Colors.black)
+                  .withAlpha(isDark ? 28 : 15),
               borderRadius: BorderRadius.circular(AppRadii.pill),
             ),
             child: Text(

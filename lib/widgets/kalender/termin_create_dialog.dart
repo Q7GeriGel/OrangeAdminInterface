@@ -24,6 +24,119 @@ class TerminCreateResult {
   });
 }
 
+DateTime _snapToHalfHour(DateTime value) {
+  final clean = DateTime(value.year, value.month, value.day, value.hour, value.minute);
+  final remainder = clean.minute % 30;
+
+  if (remainder == 0) {
+    return DateTime(clean.year, clean.month, clean.day, clean.hour, clean.minute);
+  }
+
+  final addMinutes = 30 - remainder;
+  return clean.add(Duration(minutes: addMinutes));
+}
+
+DateTime _normalizeInitialStart(DateTime value) {
+  final snapped = _snapToHalfHour(value);
+  final latest = DateTime(snapped.year, snapped.month, snapped.day, 19, 30);
+
+  if (snapped.isAfter(latest)) {
+    return latest;
+  }
+
+  return snapped;
+}
+
+Future<TimeOfDay?> _pickHalfHourTime({
+  required BuildContext context,
+  required TimeOfDay initial,
+  required AppLocalizations t,
+}) async {
+  int selectedHour = initial.hour;
+  int selectedMinute = initial.minute >= 30 ? 30 : 0;
+
+  return showDialog<TimeOfDay>(
+    context: context,
+    builder: (dialogCtx) {
+      return StatefulBuilder(
+        builder: (dialogCtx, setState) {
+          return AlertDialog(
+            title: Text(t.startTime),
+            content: SizedBox(
+              width: 340,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: selectedHour,
+                      items: List.generate(
+                        24,
+                        (i) => DropdownMenuItem(
+                          value: i,
+                          child: Text(i.toString().padLeft(2, '0')),
+                        ),
+                      ),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        setState(() => selectedHour = v);
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'HH',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: selectedMinute,
+                      items: const [0, 30]
+                          .map(
+                            (m) => DropdownMenuItem(
+                              value: m,
+                              child: Text(m.toString().padLeft(2, '0')),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        setState(() => selectedMinute = v);
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'MM',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: Text(t.cancel),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(
+                    dialogCtx,
+                    TimeOfDay(hour: selectedHour, minute: selectedMinute),
+                  );
+                },
+                child: Text(t.ok),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
 Future<TerminCreateResult?> showCreateTerminDialog({
   required BuildContext context,
   DateTime? presetStart,
@@ -32,12 +145,11 @@ Future<TerminCreateResult?> showCreateTerminDialog({
   final t = AppLocalizations.of(context)!;
   final messenger = ScaffoldMessenger.of(context);
 
-  DateTime start = presetStart ?? DateTime.now();
+  DateTime start = _normalizeInitialStart(presetStart ?? DateTime.now());
   int duration = 30;
 
-  const mitarbeiterList = KundenVerwaltung.allowedMitarbeiter;
-  String mitarbeiter =
-      StaffConfig.normalizeEmployee(initialMitarbeiter ?? '');
+  final mitarbeiterList = StaffConfig.allEmployees;
+  String mitarbeiter = StaffConfig.normalizeEmployee(initialMitarbeiter ?? '');
 
   if (!mitarbeiterList.contains(mitarbeiter)) {
     mitarbeiter = mitarbeiterList.first;
@@ -88,6 +200,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                 lastDate: DateTime(2100),
               );
               if (picked == null) return;
+
               setState(() {
                 start = DateTime(
                   picked.year,
@@ -100,12 +213,13 @@ Future<TerminCreateResult?> showCreateTerminDialog({
             }
 
             Future<void> pickTime() async {
-              final picked = await showTimePicker(
+              final picked = await _pickHalfHourTime(
                 context: dialogCtx,
-                initialTime:
-                    TimeOfDay(hour: start.hour, minute: start.minute),
+                initial: TimeOfDay(hour: start.hour, minute: start.minute),
+                t: t,
               );
               if (picked == null) return;
+
               setState(() {
                 start = DateTime(
                   start.year,
@@ -125,6 +239,8 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                 );
                 return;
               }
+
+              start = _snapToHalfHour(start);
 
               final startMinutes = start.hour * 60 + start.minute;
               final endMinutes = startMinutes + duration;
@@ -146,8 +262,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                   start: start,
                   durationMinutes: duration,
                   kundeName: kundeName,
-                  mitarbeiterName:
-                      StaffConfig.normalizeEmployee(mitarbeiter),
+                  mitarbeiterName: StaffConfig.normalizeEmployee(mitarbeiter),
                   status: status,
                 ),
               );
@@ -189,12 +304,9 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                             .take(10);
                       },
                       onSelected: (s) => kundeCtrl.text = s,
-                      fieldViewBuilder:
-                          (ctx, textCtrl, focusNode, onSubmit) {
+                      fieldViewBuilder: (ctx, textCtrl, focusNode, onSubmit) {
                         textCtrl.text = kundeCtrl.text;
-                        textCtrl.addListener(
-                          () => kundeCtrl.text = textCtrl.text,
-                        );
+                        textCtrl.addListener(() => kundeCtrl.text = textCtrl.text);
                         return TextField(
                           controller: textCtrl,
                           focusNode: focusNode,
@@ -219,8 +331,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                             ),
                           )
                           .toList(),
-                      onChanged: (v) =>
-                          setState(() => duration = v ?? duration),
+                      onChanged: (v) => setState(() => duration = v ?? duration),
                       decoration: InputDecoration(
                         labelText: t.duration,
                         border: OutlineInputBorder(
@@ -240,8 +351,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                           )
                           .toList(),
                       onChanged: (v) => setState(
-                        () => mitarbeiter =
-                            StaffConfig.normalizeEmployee(v ?? mitarbeiter),
+                        () => mitarbeiter = StaffConfig.normalizeEmployee(v ?? mitarbeiter),
                       ),
                       decoration: InputDecoration(
                         labelText: t.employee,

@@ -87,83 +87,95 @@ class _KundeDialogState extends State<KundeDialog> {
     final tel = telCtrl.text.trim();
 
     if (name.isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('Bitte Namen eingeben.')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Bitte Namen eingeben.')),
+      );
       return;
     }
 
     setState(() => saving = true);
     await Future<void>.delayed(const Duration(milliseconds: 120));
+    if (!mounted) return;
     setState(() => saving = false);
 
     final id = widget.initial?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
 
-    final kunde = Kunde(
-      id: id,
-      name: name,
-      telefonnummer: tel,
-      stammkunde: stammkunde,
-      bevorzugterFriseur: bevorzugterFriseur,
-      letzterHaarschnitt: letzterHaarschnitt,
-      naechsterTermin: naechsterTermin,
+    Navigator.pop(
+      context,
+      Kunde(
+        id: id,
+        name: name,
+        telefonnummer: tel,
+        stammkunde: stammkunde,
+        bevorzugterFriseur: bevorzugterFriseur,
+        letzterHaarschnitt: letzterHaarschnitt,
+        naechsterTermin: naechsterTermin,
+      ),
     );
-
-    if (!mounted) return;
-    Navigator.pop(context, kunde);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEdit = widget.initial != null;
+    final friseurItems =
+        widget.friseure.isNotEmpty ? widget.friseure : const ['Serkan'];
+
+    if (!friseurItems.contains(bevorzugterFriseur)) {
+      bevorzugterFriseur = friseurItems.first;
+    }
 
     return AlertDialog(
-      title: Text(isEdit ? 'Kunden bearbeiten' : 'Neuen Kunden anlegen'),
+      title: Text(widget.initial == null ? 'Neuer Kunde' : 'Kunde bearbeiten'),
       content: SizedBox(
-        width: 520,
+        width: 760,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameCtrl,
-              textInputAction: TextInputAction.next,
+              enabled: !saving,
               decoration: InputDecoration(
                 labelText: 'Name',
-                hintText: 'z.B. Lara Demir',
-                prefixIcon: const Icon(Icons.person),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                prefixIcon: const Icon(Icons.person_outline),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-
             TextField(
               controller: telCtrl,
+              enabled: !saving,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Telefonnummer',
-                hintText: 'z.B. +43 699 ...',
-                prefixIcon: const Icon(Icons.phone),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                prefixIcon: const Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-
             Row(
               children: [
                 Expanded(
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Bevorzugter Friseur',
-                      prefixIcon: const Icon(Icons.content_cut),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black.withAlpha(30)),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: bevorzugterFriseur,
                         isExpanded: true,
-                        items: (widget.friseure.isNotEmpty ? widget.friseure : ['Serkan', 'Aylin', 'Mira', 'Kenan'])
+                        items: friseurItems
                             .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                             .toList(),
-                        onChanged: saving ? null : (v) => setState(() => bevorzugterFriseur = v ?? bevorzugterFriseur),
+                        onChanged: saving
+                            ? null
+                            : (v) => setState(
+                                  () => bevorzugterFriseur = v ?? bevorzugterFriseur,
+                                ),
                       ),
                     ),
                   ),
@@ -180,10 +192,17 @@ class _KundeDialogState extends State<KundeDialog> {
                       children: [
                         const Icon(Icons.star, size: 18),
                         const SizedBox(width: 10),
-                        const Expanded(child: Text('Stammkunde', style: TextStyle(fontWeight: FontWeight.w700))),
+                        const Expanded(
+                          child: Text(
+                            'Stammkunde',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
                         Switch(
                           value: stammkunde,
-                          onChanged: saving ? null : (v) => setState(() => stammkunde = v),
+                          onChanged: saving
+                              ? null
+                              : (v) => setState(() => stammkunde = v),
                         ),
                       ],
                     ),
@@ -191,16 +210,18 @@ class _KundeDialogState extends State<KundeDialog> {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: saving ? null : _pickLetzter,
                     icon: const Icon(Icons.history),
-                    label: Text(letzterHaarschnitt == null ? 'Letzter Haarschnitt' : _fmt(letzterHaarschnitt!)),
+                    label: Text(
+                      letzterHaarschnitt == null
+                          ? 'Letzter Haarschnitt'
+                          : _fmt(letzterHaarschnitt!),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -208,7 +229,11 @@ class _KundeDialogState extends State<KundeDialog> {
                   child: OutlinedButton.icon(
                     onPressed: saving ? null : _pickNext,
                     icon: const Icon(Icons.event),
-                    label: Text(naechsterTermin == null ? 'Nächster Termin' : _fmt(naechsterTermin!)),
+                    label: Text(
+                      naechsterTermin == null
+                          ? 'Nächster Termin'
+                          : _fmt(naechsterTermin!),
+                    ),
                   ),
                 ),
               ],
@@ -225,7 +250,11 @@ class _KundeDialogState extends State<KundeDialog> {
           style: FilledButton.styleFrom(backgroundColor: _orange),
           onPressed: saving ? null : _save,
           icon: saving
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Icon(Icons.save),
           label: const Text('Speichern'),
         ),

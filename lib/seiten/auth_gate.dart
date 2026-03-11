@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
+import '../config/staff_config.dart';
 import 'startseite.dart';
 
 class AuthGate extends StatefulWidget {
@@ -16,12 +17,11 @@ class _AuthGateState extends State<AuthGate> {
 
   bool _loading = false;
 
-  // ✅ Mock-User
-  final Map<String, _UserInfo> _users = {
-    'serkan': const _UserInfo(password: '123', isAdmin: false, displayName: 'serkan'),
-    'sedat': const _UserInfo(password: '123', isAdmin: true, displayName: 'sedat'),
-    'samet': const _UserInfo(password: '123', isAdmin: false, displayName: 'samet'),
-  };
+  @override
+  void initState() {
+    super.initState();
+    StaffConfig.ensureInitialized();
+  }
 
   @override
   void dispose() {
@@ -48,7 +48,7 @@ class _AuthGateState extends State<AuthGate> {
     try {
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
-      final info = _users[username];
+      final info = await StaffConfig.findUser(username);
 
       if (info == null || info.password != password) {
         if (!mounted) return;
@@ -63,7 +63,7 @@ class _AuthGateState extends State<AuthGate> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => Startseite(
-            benutzername: info.displayName,
+            benutzername: info.username,
             isAdmin: info.isAdmin,
           ),
         ),
@@ -109,7 +109,6 @@ class _AuthGateState extends State<AuthGate> {
                   ),
                 ),
                 const SizedBox(height: 14),
-
                 TextField(
                   controller: _userCtrl,
                   onSubmitted: (_) => _login(),
@@ -125,9 +124,7 @@ class _AuthGateState extends State<AuthGate> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 TextField(
                   controller: _passCtrl,
                   obscureText: true,
@@ -144,9 +141,7 @@ class _AuthGateState extends State<AuthGate> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 14),
-
                 SizedBox(
                   width: double.infinity,
                   height: 46,
@@ -171,14 +166,6 @@ class _AuthGateState extends State<AuthGate> {
                           ),
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                Text(
-                  t.allowedAccountsHint,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
               ],
             ),
           ),
@@ -186,16 +173,4 @@ class _AuthGateState extends State<AuthGate> {
       ),
     );
   }
-}
-
-class _UserInfo {
-  final String password;
-  final bool isAdmin;
-  final String displayName;
-
-  const _UserInfo({
-    required this.password,
-    required this.isAdmin,
-    required this.displayName,
-  });
 }

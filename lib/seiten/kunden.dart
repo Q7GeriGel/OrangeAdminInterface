@@ -6,6 +6,7 @@ import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
+import '../config/staff_config.dart';
 import '../widgets/kunden_tabelle.dart';
 import '../widgets/kunde_dialog.dart';
 
@@ -111,7 +112,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                             value: friseur,
                             items: [
                               DropdownMenuItem(value: null, child: Text(t.filterAny)),
-                              ...verwaltung.friseure.map(
+                              ...StaffConfig.allEmployees.map(
                                 (s) => DropdownMenuItem(value: s, child: Text(s)),
                               ),
                             ],
@@ -178,13 +179,18 @@ class _KundenSeiteState extends State<KundenSeite> {
   }
 
   Future<void> _bearbeiten(KundenVerwaltung v, Kunde k) async {
-    final edited = await _openKundeDialog(friseure: v.friseure, initial: k);
+    final edited = await _openKundeDialog(
+      friseure: StaffConfig.allEmployees,
+      initial: k,
+    );
     if (edited == null) return;
     await v.bearbeiten(edited);
   }
 
   Future<void> _neu(KundenVerwaltung v) async {
-    final neu = await _openKundeDialog(friseure: v.friseure);
+    final neu = await _openKundeDialog(
+      friseure: StaffConfig.allEmployees,
+    );
     if (neu == null) return;
     await v.hinzufuegen(neu);
   }

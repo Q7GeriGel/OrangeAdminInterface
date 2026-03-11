@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
 import 'dashboard.dart';
-import 'kunden.dart';
-import 'mitarbeiter.dart';
+import 'kunden.dart' as kunden_page;
+import 'mitarbeiter.dart' as mitarbeiter_page;
 import 'termine_wochenansicht.dart';
-import 'statistik.dart';
+import 'statistik.dart' as statistik_page;
 import 'einstellung.dart';
 
 class Startseite extends StatefulWidget {
-  final String benutzername; // eingeloggt
+  final String benutzername;
   final bool isAdmin;
 
   const Startseite({
@@ -29,13 +29,16 @@ class _StartseiteState extends State<Startseite> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       DashboardPage(benutzername: widget.benutzername),
-      const KundenSeite(),
-      MitarbeiterSeite(benutzername: widget.benutzername),
+      const kunden_page.KundenSeite(),
+      mitarbeiter_page.MitarbeiterSeite(
+        benutzername: widget.benutzername,
+        isAdmin: widget.isAdmin,
+      ),
       TermineWochenansicht(
         isAdmin: widget.isAdmin,
         sichtMitarbeiterName: widget.benutzername,
       ),
-      StatistikSeite(
+      statistik_page.StatistikSeite(
         angemeldeterName: widget.benutzername,
         isAdmin: widget.isAdmin,
       ),
@@ -49,7 +52,9 @@ class _StartseiteState extends State<Startseite> {
             index: _index,
             onChanged: (i) => setState(() => _index = i),
           ),
-          Expanded(child: pages[_index]),
+          Expanded(
+            child: pages[_index],
+          ),
         ],
       ),
     );
@@ -60,7 +65,10 @@ class _Rail extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
 
-  const _Rail({required this.index, required this.onChanged});
+  const _Rail({
+    required this.index,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +88,10 @@ class _Rail extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
               child: Text(
                 t.appTitle,
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
               ),
             ),
             const SizedBox(height: 6),
@@ -124,11 +135,12 @@ class _Rail extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(14),
               child: OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed('/login'),
                 icon: const Icon(Icons.logout),
                 label: Text(t.logout),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -162,15 +174,26 @@ class _NavItem extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40) : Colors.transparent,
+            color: selected
+                ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? const Color(0xFFC95B4C).withAlpha(110) : border),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFFC95B4C).withAlpha(110)
+                  : border,
+            ),
           ),
           child: Row(
             children: [
               Icon(icon, size: 20),
               const SizedBox(width: 10),
-              Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w800))),
+              Expanded(
+                child: Text(
+                  text,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
             ],
           ),
         ),

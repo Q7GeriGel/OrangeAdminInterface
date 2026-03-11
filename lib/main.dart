@@ -15,18 +15,16 @@ import 'repositories/terminplan_repository.dart';
 
 import 'widgets/theme/app_theme.dart';
 import 'seiten/auth_gate.dart';
-
 import 'config/staff_config.dart';
 import 'models/termin.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await StaffConfig.ensureInitialized();
   runApp(const FriseurOrangeApp());
 }
 
-/// ✅ true = SharedPreferences (persistent)
-/// ❌ false = InMemory (nur RAM)
-const bool USE_PREFS_STORAGE = true;
+const bool usePrefsStorage = true;
 
 class FriseurOrangeApp extends StatelessWidget {
   const FriseurOrangeApp({super.key});
@@ -35,44 +33,34 @@ class FriseurOrangeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // ✅ Theme + Locale (prefs)
         ChangeNotifierProvider<AppSettingsController>(
           create: (_) => AppSettingsController()..load(),
         ),
-
-        // ✅ Session (Login + Active Account)
         ChangeNotifierProvider<SessionController>(
           create: (_) => SessionController(),
         ),
-
-        // ✅ Kunden persistent (prefs)
         ChangeNotifierProvider<KundenVerwaltung>(
           create: (_) {
             final v = KundenVerwaltung();
-            v.init(); // async, aber UI kann schon starten
+            v.init();
             return v;
           },
         ),
-
-        // ✅ Termine persistent (prefs) – oder fallback InMemory
         Provider<Terminquelle>(
-          create: (_) => USE_PREFS_STORAGE
+          create: (_) => usePrefsStorage
               ? PrefsTerminquelle(seedDemoData: true)
               : InMemoryTerminquelle(),
         ),
-
         Provider<TerminplanService>(
           create: (ctx) => TerminplanService(
             quelle: ctx.read<Terminquelle>(),
           ),
         ),
-
         Provider<TerminplanRepository>(
           create: (ctx) => TerminplanRepository(
             ctx.read<TerminplanService>(),
           ),
         ),
-
         ChangeNotifierProvider<TerminplanController>(
           create: (ctx) => TerminplanController(
             ctx.read<TerminplanService>(),
@@ -100,10 +88,6 @@ class FriseurOrangeApp extends StatelessWidget {
   }
 }
 
-/// ------------------------------------------------------------
-/// Fallback: InMemory (wenn USE_PREFS_STORAGE=false)
-/// ⚠️ Nutzt nur die 3 Mitarbeiter aus StaffConfig
-/// ------------------------------------------------------------
 class InMemoryTerminquelle implements Terminquelle {
   final Map<String, List<Termin>> _store = {};
 
@@ -125,28 +109,36 @@ class InMemoryTerminquelle implements Terminquelle {
     final k = _key(m);
     if (_store.containsKey(k)) return;
 
+    final employees = StaffConfig.allEmployees;
+
     final list = <Termin>[
       Termin(
         id: 'seed_${k}_1',
         start: _d(m, 0, 9, 0),
         end: _d(m, 0, 9, 30),
         kundeName: 'Refik Erdogan',
-        mitarbeiterName: StaffConfig.employees[0],
+        mitarbeiterName:
+            employees.isNotEmpty ? employees[0] : StaffConfig.defaultEmployee,
         status: Termin.statusBestaetigt,
         service: 'Haarschnitt',
         price: 25,
-        color: StaffConfig.colorOf(StaffConfig.employees[0]),
+        color: StaffConfig.colorOf(
+          employees.isNotEmpty ? employees[0] : StaffConfig.defaultEmployee,
+        ),
       ),
       Termin(
         id: 'seed_${k}_2',
         start: _d(m, 0, 10, 0),
         end: _d(m, 0, 10, 30),
         kundeName: 'Ali',
-        mitarbeiterName: StaffConfig.employees[1],
+        mitarbeiterName:
+            employees.length > 1 ? employees[1] : StaffConfig.defaultEmployee,
         status: Termin.statusOffen,
         service: 'Bart',
         price: 20,
-        color: StaffConfig.colorOf(StaffConfig.employees[1]),
+        color: StaffConfig.colorOf(
+          employees.length > 1 ? employees[1] : StaffConfig.defaultEmployee,
+        ),
       ),
     ];
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
+import '../config/staff_config.dart';
 import '../l10n/gen/app_localizations.dart';
 
 class KundeCreateResult {
@@ -30,7 +31,8 @@ Future<KundeCreateResult?> showCreateKundeDialog({
 
   bool saving = false;
   bool stamm = false;
-  String friseur = KundenVerwaltung.allowedMitarbeiter.first;
+  final mitarbeiter = StaffConfig.allEmployees;
+  String friseur = mitarbeiter.first;
 
   try {
     final res = await showDialog<KundeCreateResult>(
@@ -91,7 +93,7 @@ Future<KundeCreateResult?> showCreateKundeDialog({
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: friseur,
-                      items: KundenVerwaltung.allowedMitarbeiter
+                      items: mitarbeiter
                           .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
                       onChanged: (v) => setState(() => friseur = v ?? friseur),
@@ -139,7 +141,6 @@ Future<KundeCreateResult?> showCreateKundeDialog({
   }
 }
 
-/// ✅ Flow-Funktion: Dialog öffnen + direkt in KundenVerwaltung speichern
 Future<void> openCreateKundeFlow({
   required BuildContext context,
 }) async {
