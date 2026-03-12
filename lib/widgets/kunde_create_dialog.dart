@@ -92,7 +92,7 @@ Future<KundeCreateResult?> showCreateKundeDialog({
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: friseur,
+                      initialValue: friseur,
                       items: mitarbeiter
                           .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),

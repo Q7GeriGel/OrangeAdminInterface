@@ -74,38 +74,230 @@ class AppConfig {
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\config\staff_config.dart =====
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class LoginUser {
+  final String username;
+  final String password;
+  final bool isAdmin;
+
+  const LoginUser({
+    required this.username,
+    required this.password,
+    required this.isAdmin,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'username': username,
+        'password': password,
+        'isAdmin': isAdmin,
+      };
+
+  factory LoginUser.fromJson(Map<String, dynamic> json) {
+    return LoginUser(
+      username: (json['username'] ?? '').toString().trim().toLowerCase(),
+      password: (json['password'] ?? '').toString(),
+      isAdmin: json['isAdmin'] == true,
+    );
+  }
+}
 
 class StaffConfig {
-  /// ✅ EINZIGE 3 Mitarbeiter im System
   static const List<String> employees = ['Serkan', 'Sedat', 'Samet'];
-
   static const String defaultEmployee = 'Serkan';
 
-  static const Map<String, Color> _colors = {
+  static const String _usersKey = 'fo_login_users_v2';
+
+  static const Map<String, Color> _seedColors = {
     'Serkan': Color(0xFFCC5C4C),
     'Sedat': Color(0xFF2E7D32),
     'Samet': Color(0xFF335776),
   };
 
+  static const List<Color> _dynamicPalette = [
+    Color(0xFF6E61A8),
+    Color(0xFF2E7DDB),
+    Color(0xFF00897B),
+    Color(0xFF8E24AA),
+    Color(0xFF5D4037),
+    Color(0xFF3949AB),
+    Color(0xFF546E7A),
+    Color(0xFFEF6C00),
+  ];
+
+  static List<String> _extraEmployees = [];
+  static List<LoginUser> _cachedUsers = [];
+  static bool _initialized = false;
+
+  static List<String> get allEmployees => [
+        ...employees,
+        ..._extraEmployees.where((e) => !employees.contains(e)),
+      ];
+
+  static Future<void> ensureInitialized() async {
+    if (_initialized) return;
+    await _loadFromPrefs();
+    _initialized = true;
+  }
+
+  static Future<void> reload() async {
+    _initialized = false;
+    _extraEmployees = [];
+    _cachedUsers = [];
+    await ensureInitialized();
+  }
+
+  static Future<List<LoginUser>> loadUsers() async {
+    await ensureInitialized();
+    return List<LoginUser>.from(_cachedUsers);
+  }
+
+  static Future<LoginUser?> findUser(String username) async {
+    await ensureInitialized();
+    final clean = username.trim().toLowerCase();
+    try {
+      return _cachedUsers.firstWhere((u) => u.username == clean);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<String?> createEmployee({
+    required String username,
+    required String password,
+  }) async {
+    await ensureInitialized();
+
+    final cleanUsername = username.trim().toLowerCase();
+    final cleanPassword = password.trim();
+
+    if (cleanUsername.isEmpty) {
+      return 'Bitte Benutzername eingeben.';
+    }
+
+    if (cleanPassword.isEmpty) {
+      return 'Bitte Passwort eingeben.';
+    }
+
+    if (!RegExp(r'^[a-z0-9._-]+$').hasMatch(cleanUsername)) {
+      return 'Benutzername darf nur Kleinbuchstaben, Zahlen, Punkt, Minus oder Unterstrich enthalten.';
+    }
+
+    final exists = _cachedUsers.any((u) => u.username == cleanUsername);
+    if (exists) {
+      return 'Benutzername existiert bereits.';
+    }
+
+    final newUser = LoginUser(
+      username: cleanUsername,
+      password: cleanPassword,
+      isAdmin: false,
+    );
+
+    _cachedUsers = [..._cachedUsers, newUser];
+
+    final canonicalName = _toEmployeeName(cleanUsername);
+    if (!employees.contains(canonicalName) &&
+        !_extraEmployees.contains(canonicalName)) {
+      _extraEmployees = [..._extraEmployees, canonicalName];
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _usersKey,
+      jsonEncode(_cachedUsers.map((u) => u.toJson()).toList()),
+    );
+
+    return null;
+  }
+
+  static Future<void> _loadFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_usersKey);
+
+    List<LoginUser> users;
+
+    if (raw == null || raw.trim().isEmpty) {
+      users = _seedUsers();
+      await prefs.setString(
+        _usersKey,
+        jsonEncode(users.map((u) => u.toJson()).toList()),
+      );
+    } else {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          users = decoded
+              .whereType<Map>()
+              .map((e) => LoginUser.fromJson(Map<String, dynamic>.from(e)))
+              .where((u) => u.username.isNotEmpty)
+              .toList();
+        } else {
+          users = _seedUsers();
+        }
+      } catch (_) {
+        users = _seedUsers();
+      }
+
+      if (users.isEmpty) {
+        users = _seedUsers();
+        await prefs.setString(
+          _usersKey,
+          jsonEncode(users.map((u) => u.toJson()).toList()),
+        );
+      }
+    }
+
+    _cachedUsers = users;
+
+    final canonical = users
+        .map((u) => _toEmployeeName(u.username))
+        .where((name) => !employees.contains(name))
+        .toSet()
+        .toList()
+      ..sort();
+
+    _extraEmployees = canonical;
+  }
+
+  static List<LoginUser> _seedUsers() {
+    return const [
+      LoginUser(username: 'serkan', password: '123', isAdmin: false),
+      LoginUser(username: 'sedat', password: '123', isAdmin: true),
+      LoginUser(username: 'samet', password: '123', isAdmin: false),
+    ];
+  }
+
+  static String _toEmployeeName(String value) {
+    final clean = value.trim();
+    if (clean.isEmpty) return defaultEmployee;
+    return clean[0].toUpperCase() + clean.substring(1).toLowerCase();
+  }
+
   static String normalizeEmployee(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return defaultEmployee;
 
-    final normalized =
-        trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
-
-    return employees.contains(normalized) ? normalized : defaultEmployee;
+    final normalized = _toEmployeeName(trimmed);
+    return allEmployees.contains(normalized) ? normalized : defaultEmployee;
   }
 
   static Color colorOf(String name) {
     final normalized = normalizeEmployee(name);
-    return _colors[normalized] ?? _colors[defaultEmployee]!;
+    if (_seedColors.containsKey(normalized)) {
+      return _seedColors[normalized]!;
+    }
+
+    final hash = normalized.runes.fold<int>(0, (sum, rune) => sum + rune);
+    return _dynamicPalette[hash % _dynamicPalette.length];
   }
 
   static bool isValid(String name) {
     final normalized = normalizeEmployee(name);
-    return employees.contains(normalized);
+    return allEmployees.contains(normalized);
   }
 }
 
@@ -144,8 +336,8 @@ class AppSettingsController extends ChangeNotifier {
   static const _kThemeMode = 'themeMode';
   static const _kLocale = 'locale';
 
-  ThemeMode _themeMode = ThemeMode.dark;
-  Locale _locale = const Locale('tr');
+  ThemeMode _themeMode = ThemeMode.light;
+  Locale _locale = const Locale('de');
 
   ThemeMode get themeMode => _themeMode;
   Locale get locale => _locale;
@@ -161,7 +353,7 @@ class AppSettingsController extends ChangeNotifier {
         'light' => ThemeMode.light,
         'dark' => ThemeMode.dark,
         'system' => ThemeMode.system,
-        _ => ThemeMode.dark,
+        _ => ThemeMode.light,
       };
     }
 
@@ -202,7 +394,6 @@ class AppSettingsController extends ChangeNotifier {
     notifyListeners();
   }
 }
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\controllers\einstellung_controller.dart =====
@@ -4403,18 +4594,16 @@ import 'repositories/terminplan_repository.dart';
 
 import 'widgets/theme/app_theme.dart';
 import 'seiten/auth_gate.dart';
-
 import 'config/staff_config.dart';
 import 'models/termin.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await StaffConfig.ensureInitialized();
   runApp(const FriseurOrangeApp());
 }
 
-/// ✅ true = SharedPreferences (persistent)
-/// ❌ false = InMemory (nur RAM)
-const bool USE_PREFS_STORAGE = true;
+const bool usePrefsStorage = true;
 
 class FriseurOrangeApp extends StatelessWidget {
   const FriseurOrangeApp({super.key});
@@ -4423,44 +4612,34 @@ class FriseurOrangeApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // ✅ Theme + Locale (prefs)
         ChangeNotifierProvider<AppSettingsController>(
           create: (_) => AppSettingsController()..load(),
         ),
-
-        // ✅ Session (Login + Active Account)
         ChangeNotifierProvider<SessionController>(
           create: (_) => SessionController(),
         ),
-
-        // ✅ Kunden persistent (prefs)
         ChangeNotifierProvider<KundenVerwaltung>(
           create: (_) {
             final v = KundenVerwaltung();
-            v.init(); // async, aber UI kann schon starten
+            v.init();
             return v;
           },
         ),
-
-        // ✅ Termine persistent (prefs) – oder fallback InMemory
         Provider<Terminquelle>(
-          create: (_) => USE_PREFS_STORAGE
+          create: (_) => usePrefsStorage
               ? PrefsTerminquelle(seedDemoData: true)
               : InMemoryTerminquelle(),
         ),
-
         Provider<TerminplanService>(
           create: (ctx) => TerminplanService(
             quelle: ctx.read<Terminquelle>(),
           ),
         ),
-
         Provider<TerminplanRepository>(
           create: (ctx) => TerminplanRepository(
             ctx.read<TerminplanService>(),
           ),
         ),
-
         ChangeNotifierProvider<TerminplanController>(
           create: (ctx) => TerminplanController(
             ctx.read<TerminplanService>(),
@@ -4488,10 +4667,6 @@ class FriseurOrangeApp extends StatelessWidget {
   }
 }
 
-/// ------------------------------------------------------------
-/// Fallback: InMemory (wenn USE_PREFS_STORAGE=false)
-/// ⚠️ Nutzt nur die 3 Mitarbeiter aus StaffConfig
-/// ------------------------------------------------------------
 class InMemoryTerminquelle implements Terminquelle {
   final Map<String, List<Termin>> _store = {};
 
@@ -4513,28 +4688,36 @@ class InMemoryTerminquelle implements Terminquelle {
     final k = _key(m);
     if (_store.containsKey(k)) return;
 
+    final employees = StaffConfig.allEmployees;
+
     final list = <Termin>[
       Termin(
         id: 'seed_${k}_1',
         start: _d(m, 0, 9, 0),
         end: _d(m, 0, 9, 30),
         kundeName: 'Refik Erdogan',
-        mitarbeiterName: StaffConfig.employees[0],
+        mitarbeiterName:
+            employees.isNotEmpty ? employees[0] : StaffConfig.defaultEmployee,
         status: Termin.statusBestaetigt,
         service: 'Haarschnitt',
         price: 25,
-        color: StaffConfig.colorOf(StaffConfig.employees[0]),
+        color: StaffConfig.colorOf(
+          employees.isNotEmpty ? employees[0] : StaffConfig.defaultEmployee,
+        ),
       ),
       Termin(
         id: 'seed_${k}_2',
         start: _d(m, 0, 10, 0),
         end: _d(m, 0, 10, 30),
         kundeName: 'Ali',
-        mitarbeiterName: StaffConfig.employees[1],
+        mitarbeiterName:
+            employees.length > 1 ? employees[1] : StaffConfig.defaultEmployee,
         status: Termin.statusOffen,
         service: 'Bart',
         price: 20,
-        color: StaffConfig.colorOf(StaffConfig.employees[1]),
+        color: StaffConfig.colorOf(
+          employees.length > 1 ? employees[1] : StaffConfig.defaultEmployee,
+        ),
       ),
     ];
 
@@ -5536,6 +5719,7 @@ abstract class Terminquelle {
 import 'package:flutter/material.dart';
 import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
+import '../config/staff_config.dart';
 import 'startseite.dart';
 
 class AuthGate extends StatefulWidget {
@@ -5551,12 +5735,11 @@ class _AuthGateState extends State<AuthGate> {
 
   bool _loading = false;
 
-  // ✅ Mock-User
-  final Map<String, _UserInfo> _users = {
-    'serkan': const _UserInfo(password: '123', isAdmin: false, displayName: 'serkan'),
-    'sedat': const _UserInfo(password: '123', isAdmin: true, displayName: 'sedat'),
-    'samet': const _UserInfo(password: '123', isAdmin: false, displayName: 'samet'),
-  };
+  @override
+  void initState() {
+    super.initState();
+    StaffConfig.ensureInitialized();
+  }
 
   @override
   void dispose() {
@@ -5583,7 +5766,7 @@ class _AuthGateState extends State<AuthGate> {
     try {
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
-      final info = _users[username];
+      final info = await StaffConfig.findUser(username);
 
       if (info == null || info.password != password) {
         if (!mounted) return;
@@ -5598,7 +5781,7 @@ class _AuthGateState extends State<AuthGate> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => Startseite(
-            benutzername: info.displayName,
+            benutzername: info.username,
             isAdmin: info.isAdmin,
           ),
         ),
@@ -5644,7 +5827,6 @@ class _AuthGateState extends State<AuthGate> {
                   ),
                 ),
                 const SizedBox(height: 14),
-
                 TextField(
                   controller: _userCtrl,
                   onSubmitted: (_) => _login(),
@@ -5660,9 +5842,7 @@ class _AuthGateState extends State<AuthGate> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 TextField(
                   controller: _passCtrl,
                   obscureText: true,
@@ -5679,9 +5859,7 @@ class _AuthGateState extends State<AuthGate> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 14),
-
                 SizedBox(
                   width: double.infinity,
                   height: 46,
@@ -5706,14 +5884,6 @@ class _AuthGateState extends State<AuthGate> {
                           ),
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                Text(
-                  t.allowedAccountsHint,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
               ],
             ),
           ),
@@ -5722,19 +5892,6 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 }
-
-class _UserInfo {
-  final String password;
-  final bool isAdmin;
-  final String displayName;
-
-  const _UserInfo({
-    required this.password,
-    required this.isAdmin,
-    required this.displayName,
-  });
-}
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\seiten\dashboard.dart =====
@@ -5755,6 +5912,7 @@ import '../dashboard/box_freie_zeitfenster.dart';
 
 import '../widgets/kalender/termin_create_dialog.dart';
 import '../widgets/kunde_dialog.dart';
+import '../config/staff_config.dart';
 
 class DashboardPage extends StatelessWidget {
   final String benutzername;
@@ -5791,7 +5949,7 @@ class DashboardPage extends StatelessWidget {
         barrierDismissible: false,
         builder: (c) => KundeDialog(
           initial: null,
-          friseure: verwaltung.friseure,
+          friseure: StaffConfig.allEmployees,
         ),
       );
 
@@ -6255,6 +6413,7 @@ import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
+import '../config/staff_config.dart';
 import '../widgets/kunden_tabelle.dart';
 import '../widgets/kunde_dialog.dart';
 
@@ -6360,7 +6519,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                             value: friseur,
                             items: [
                               DropdownMenuItem(value: null, child: Text(t.filterAny)),
-                              ...verwaltung.friseure.map(
+                              ...StaffConfig.allEmployees.map(
                                 (s) => DropdownMenuItem(value: s, child: Text(s)),
                               ),
                             ],
@@ -6427,13 +6586,18 @@ class _KundenSeiteState extends State<KundenSeite> {
   }
 
   Future<void> _bearbeiten(KundenVerwaltung v, Kunde k) async {
-    final edited = await _openKundeDialog(friseure: v.friseure, initial: k);
+    final edited = await _openKundeDialog(
+      friseure: StaffConfig.allEmployees,
+      initial: k,
+    );
     if (edited == null) return;
     await v.bearbeiten(edited);
   }
 
   Future<void> _neu(KundenVerwaltung v) async {
-    final neu = await _openKundeDialog(friseure: v.friseure);
+    final neu = await _openKundeDialog(
+      friseure: StaffConfig.allEmployees,
+    );
     if (neu == null) return;
     await v.hinzufuegen(neu);
   }
@@ -6559,15 +6723,18 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
+import '../config/staff_config.dart';
 import '../widgets/app_page.dart';
 import '../widgets/theme/app_tokens.dart';
 
 class MitarbeiterSeite extends StatefulWidget {
   final String benutzername;
+  final bool isAdmin;
 
   const MitarbeiterSeite({
     super.key,
     required this.benutzername,
+    required this.isAdmin,
   });
 
   @override
@@ -6578,12 +6745,12 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
   final TextEditingController _notesController = TextEditingController();
 
   final List<String> freieSlots = const [
-    "08:00 – 08:30",
-    "08:30 – 09:00",
-    "09:00 – 09:30",
-    "10:00 – 10:30",
-    "10:30 – 11:00",
-    "11:00 – 11:30"
+    '08:00 – 08:30',
+    '08:30 – 09:00',
+    '09:00 – 09:30',
+    '10:00 – 10:30',
+    '10:30 – 11:00',
+    '11:00 – 11:30',
   ];
 
   String get _notesKey => 'notes_${widget.benutzername.toLowerCase()}';
@@ -6610,7 +6777,7 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
 
   Future<void> _loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
-    final txt = prefs.getString(_notesKey) ?? "";
+    final txt = prefs.getString(_notesKey) ?? '';
     if (!mounted) return;
 
     final t = AppLocalizations.of(context)!;
@@ -6629,6 +6796,23 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(t.notesSaved)),
     );
+  }
+
+  Future<void> _neuenMitarbeiterAnlegen() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const _CreateEmployeeDialog(),
+    );
+
+    if (result == true && mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mitarbeiter erfolgreich angelegt.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -6650,11 +6834,15 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
           _UserHeaderCard(
             benutzername: widget.benutzername,
             subtitle: t.employeesSubtitle,
+            trailing: widget.isAdmin
+                ? FilledButton.icon(
+                    onPressed: _neuenMitarbeiterAnlegen,
+                    icon: const Icon(Icons.person_add_alt_1),
+                    label: const Text('Neuer Mitarbeiter'),
+                  )
+                : null,
           ),
           const SizedBox(height: AppGaps.s18),
-
-          // ✅ HESAP / ACCOUNT PANEL KOMPLETT ENTFERNT
-
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppRadii.r22),
@@ -6739,13 +6927,125 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
   }
 }
 
+class _CreateEmployeeDialog extends StatefulWidget {
+  const _CreateEmployeeDialog();
+
+  @override
+  State<_CreateEmployeeDialog> createState() => _CreateEmployeeDialogState();
+}
+
+class _CreateEmployeeDialogState extends State<_CreateEmployeeDialog> {
+  final TextEditingController _usernameCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
+
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _usernameCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final username = _usernameCtrl.text.trim().toLowerCase();
+    final password = _passwordCtrl.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte Benutzername und Passwort eingeben.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    final error = await StaffConfig.createEmployee(
+      username: username,
+      password: password,
+    );
+
+    if (!mounted) return;
+    setState(() => _saving = false);
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Neuen Mitarbeiter anlegen'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _usernameCtrl,
+              textInputAction: TextInputAction.next,
+              enabled: !_saving,
+              decoration: InputDecoration(
+                labelText: 'Benutzername',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordCtrl,
+              obscureText: true,
+              enabled: !_saving,
+              onSubmitted: (_) => _save(),
+              decoration: InputDecoration(
+                labelText: 'Passwort',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Erstellen'),
+        ),
+      ],
+    );
+  }
+}
+
 class _UserHeaderCard extends StatelessWidget {
   final String benutzername;
   final String subtitle;
+  final Widget? trailing;
 
   const _UserHeaderCard({
     required this.benutzername,
     required this.subtitle,
+    this.trailing,
   });
 
   @override
@@ -6792,6 +7092,10 @@ class _UserHeaderCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: 14),
+              trailing!,
+            ],
           ],
         ),
       ),
@@ -6900,7 +7204,8 @@ class _SlotTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: (statusIsFree ? AppColors.orange : Colors.black).withAlpha(isDark ? 28 : 15),
+              color: (statusIsFree ? AppColors.orange : Colors.black)
+                  .withAlpha(isDark ? 28 : 15),
               borderRadius: BorderRadius.circular(AppRadii.pill),
             ),
             child: Text(
@@ -6924,14 +7229,14 @@ import 'package:flutter/material.dart';
 import 'package:friseur_orange_web/l10n/gen/app_localizations.dart';
 
 import 'dashboard.dart';
-import 'kunden.dart';
-import 'mitarbeiter.dart';
+import 'kunden.dart' as kunden_page;
+import 'mitarbeiter.dart' as mitarbeiter_page;
 import 'termine_wochenansicht.dart';
-import 'statistik.dart';
+import 'statistik.dart' as statistik_page;
 import 'einstellung.dart';
 
 class Startseite extends StatefulWidget {
-  final String benutzername; // eingeloggt
+  final String benutzername;
   final bool isAdmin;
 
   const Startseite({
@@ -6951,13 +7256,16 @@ class _StartseiteState extends State<Startseite> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       DashboardPage(benutzername: widget.benutzername),
-      const KundenSeite(),
-      MitarbeiterSeite(benutzername: widget.benutzername),
+      const kunden_page.KundenSeite(),
+      mitarbeiter_page.MitarbeiterSeite(
+        benutzername: widget.benutzername,
+        isAdmin: widget.isAdmin,
+      ),
       TermineWochenansicht(
         isAdmin: widget.isAdmin,
         sichtMitarbeiterName: widget.benutzername,
       ),
-      StatistikSeite(
+      statistik_page.StatistikSeite(
         angemeldeterName: widget.benutzername,
         isAdmin: widget.isAdmin,
       ),
@@ -6971,7 +7279,9 @@ class _StartseiteState extends State<Startseite> {
             index: _index,
             onChanged: (i) => setState(() => _index = i),
           ),
-          Expanded(child: pages[_index]),
+          Expanded(
+            child: pages[_index],
+          ),
         ],
       ),
     );
@@ -6982,7 +7292,10 @@ class _Rail extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
 
-  const _Rail({required this.index, required this.onChanged});
+  const _Rail({
+    required this.index,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -7002,7 +7315,10 @@ class _Rail extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
               child: Text(
                 t.appTitle,
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
               ),
             ),
             const SizedBox(height: 6),
@@ -7046,11 +7362,12 @@ class _Rail extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(14),
               child: OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).pushReplacementNamed('/login'),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed('/login'),
                 icon: const Icon(Icons.logout),
                 label: Text(t.logout),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -7084,15 +7401,26 @@ class _NavItem extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40) : Colors.transparent,
+            color: selected
+                ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: selected ? const Color(0xFFC95B4C).withAlpha(110) : border),
+            border: Border.all(
+              color: selected
+                  ? const Color(0xFFC95B4C).withAlpha(110)
+                  : border,
+            ),
           ),
           child: Row(
             children: [
               Icon(icon, size: 20),
               const SizedBox(width: 10),
-              Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w800))),
+              Expanded(
+                child: Text(
+                  text,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
             ],
           ),
         ),
@@ -7832,20 +8160,6 @@ class _RightPanel extends StatelessWidget {
               ),
             );
           }),
-          if (isAdmin) ...[
-            const SizedBox(height: 8),
-            Divider(color: isDark ? Colors.white10 : Colors.black12),
-            const SizedBox(height: 10),
-            Text(
-              t.adminToolsLater,
-              style: TextStyle(color: textMain, fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              t.adminToolsDesc,
-              style: TextStyle(color: textSub, fontWeight: FontWeight.w700),
-            ),
-          ],
         ],
       ),
     );
@@ -9365,7 +9679,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
   DateTime start = _normalizeInitialStart(presetStart ?? DateTime.now());
   int duration = 30;
 
-  const mitarbeiterList = KundenVerwaltung.allowedMitarbeiter;
+  final mitarbeiterList = StaffConfig.allEmployees;
   String mitarbeiter = StaffConfig.normalizeEmployee(initialMitarbeiter ?? '');
 
   if (!mitarbeiterList.contains(mitarbeiter)) {
@@ -10257,6 +10571,7 @@ import 'package:provider/provider.dart';
 
 import '../controllers/kunden_verwaltung.dart';
 import '../models/kunde.dart';
+import '../config/staff_config.dart';
 import '../l10n/gen/app_localizations.dart';
 
 class KundeCreateResult {
@@ -10284,7 +10599,8 @@ Future<KundeCreateResult?> showCreateKundeDialog({
 
   bool saving = false;
   bool stamm = false;
-  String friseur = KundenVerwaltung.allowedMitarbeiter.first;
+  final mitarbeiter = StaffConfig.allEmployees;
+  String friseur = mitarbeiter.first;
 
   try {
     final res = await showDialog<KundeCreateResult>(
@@ -10345,7 +10661,7 @@ Future<KundeCreateResult?> showCreateKundeDialog({
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: friseur,
-                      items: KundenVerwaltung.allowedMitarbeiter
+                      items: mitarbeiter
                           .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
                       onChanged: (v) => setState(() => friseur = v ?? friseur),
@@ -10393,7 +10709,6 @@ Future<KundeCreateResult?> showCreateKundeDialog({
   }
 }
 
-/// ✅ Flow-Funktion: Dialog öffnen + direkt in KundenVerwaltung speichern
 Future<void> openCreateKundeFlow({
   required BuildContext context,
 }) async {
@@ -10524,83 +10839,95 @@ class _KundeDialogState extends State<KundeDialog> {
     final tel = telCtrl.text.trim();
 
     if (name.isEmpty) {
-      messenger.showSnackBar(const SnackBar(content: Text('Bitte Namen eingeben.')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Bitte Namen eingeben.')),
+      );
       return;
     }
 
     setState(() => saving = true);
     await Future<void>.delayed(const Duration(milliseconds: 120));
+    if (!mounted) return;
     setState(() => saving = false);
 
     final id = widget.initial?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
 
-    final kunde = Kunde(
-      id: id,
-      name: name,
-      telefonnummer: tel,
-      stammkunde: stammkunde,
-      bevorzugterFriseur: bevorzugterFriseur,
-      letzterHaarschnitt: letzterHaarschnitt,
-      naechsterTermin: naechsterTermin,
+    Navigator.pop(
+      context,
+      Kunde(
+        id: id,
+        name: name,
+        telefonnummer: tel,
+        stammkunde: stammkunde,
+        bevorzugterFriseur: bevorzugterFriseur,
+        letzterHaarschnitt: letzterHaarschnitt,
+        naechsterTermin: naechsterTermin,
+      ),
     );
-
-    if (!mounted) return;
-    Navigator.pop(context, kunde);
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEdit = widget.initial != null;
+    final friseurItems =
+        widget.friseure.isNotEmpty ? widget.friseure : const ['Serkan'];
+
+    if (!friseurItems.contains(bevorzugterFriseur)) {
+      bevorzugterFriseur = friseurItems.first;
+    }
 
     return AlertDialog(
-      title: Text(isEdit ? 'Kunden bearbeiten' : 'Neuen Kunden anlegen'),
+      title: Text(widget.initial == null ? 'Neuer Kunde' : 'Kunde bearbeiten'),
       content: SizedBox(
-        width: 520,
+        width: 760,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameCtrl,
-              textInputAction: TextInputAction.next,
+              enabled: !saving,
               decoration: InputDecoration(
                 labelText: 'Name',
-                hintText: 'z.B. Lara Demir',
-                prefixIcon: const Icon(Icons.person),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                prefixIcon: const Icon(Icons.person_outline),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-
             TextField(
               controller: telCtrl,
+              enabled: !saving,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 labelText: 'Telefonnummer',
-                hintText: 'z.B. +43 699 ...',
-                prefixIcon: const Icon(Icons.phone),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                prefixIcon: const Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
             const SizedBox(height: 12),
-
             Row(
               children: [
                 Expanded(
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Bevorzugter Friseur',
-                      prefixIcon: const Icon(Icons.content_cut),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.black.withAlpha(30)),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: bevorzugterFriseur,
                         isExpanded: true,
-                        items: (widget.friseure.isNotEmpty ? widget.friseure : ['Serkan', 'Aylin', 'Mira', 'Kenan'])
+                        items: friseurItems
                             .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                             .toList(),
-                        onChanged: saving ? null : (v) => setState(() => bevorzugterFriseur = v ?? bevorzugterFriseur),
+                        onChanged: saving
+                            ? null
+                            : (v) => setState(
+                                  () => bevorzugterFriseur = v ?? bevorzugterFriseur,
+                                ),
                       ),
                     ),
                   ),
@@ -10617,10 +10944,17 @@ class _KundeDialogState extends State<KundeDialog> {
                       children: [
                         const Icon(Icons.star, size: 18),
                         const SizedBox(width: 10),
-                        const Expanded(child: Text('Stammkunde', style: TextStyle(fontWeight: FontWeight.w700))),
+                        const Expanded(
+                          child: Text(
+                            'Stammkunde',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
                         Switch(
                           value: stammkunde,
-                          onChanged: saving ? null : (v) => setState(() => stammkunde = v),
+                          onChanged: saving
+                              ? null
+                              : (v) => setState(() => stammkunde = v),
                         ),
                       ],
                     ),
@@ -10628,16 +10962,18 @@ class _KundeDialogState extends State<KundeDialog> {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: saving ? null : _pickLetzter,
                     icon: const Icon(Icons.history),
-                    label: Text(letzterHaarschnitt == null ? 'Letzter Haarschnitt' : _fmt(letzterHaarschnitt!)),
+                    label: Text(
+                      letzterHaarschnitt == null
+                          ? 'Letzter Haarschnitt'
+                          : _fmt(letzterHaarschnitt!),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -10645,7 +10981,11 @@ class _KundeDialogState extends State<KundeDialog> {
                   child: OutlinedButton.icon(
                     onPressed: saving ? null : _pickNext,
                     icon: const Icon(Icons.event),
-                    label: Text(naechsterTermin == null ? 'Nächster Termin' : _fmt(naechsterTermin!)),
+                    label: Text(
+                      naechsterTermin == null
+                          ? 'Nächster Termin'
+                          : _fmt(naechsterTermin!),
+                    ),
                   ),
                 ),
               ],
@@ -10662,7 +11002,11 @@ class _KundeDialogState extends State<KundeDialog> {
           style: FilledButton.styleFrom(backgroundColor: _orange),
           onPressed: saving ? null : _save,
           icon: saving
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Icon(Icons.save),
           label: const Text('Speichern'),
         ),
@@ -10670,7 +11014,6 @@ class _KundeDialogState extends State<KundeDialog> {
     );
   }
 }
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\widgets\kunden_tabelle.dart =====

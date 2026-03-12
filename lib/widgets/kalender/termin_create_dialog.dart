@@ -327,7 +327,7 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                           .map(
                             (m) => DropdownMenuItem(
                               value: m,
-                              child: Text('${m}${t.minutesShort}'),
+                              child: Text('$m${t.minutesShort}'),
                             ),
                           )
                           .toList(),

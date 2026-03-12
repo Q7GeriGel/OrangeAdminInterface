@@ -81,7 +81,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: DropdownButtonFormField<bool?>(
-                            value: nurStamm,
+                            initialValue: nurStamm,
                             items: [
                               DropdownMenuItem(value: null, child: Text(t.filterAny)),
                               DropdownMenuItem(value: true, child: Text(t.filterOnlyRegulars)),
@@ -109,7 +109,7 @@ class _KundenSeiteState extends State<KundenSeite> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: DropdownButtonFormField<String?>(
-                            value: friseur,
+                            initialValue: friseur,
                             items: [
                               DropdownMenuItem(value: null, child: Text(t.filterAny)),
                               ...StaffConfig.allEmployees.map(
