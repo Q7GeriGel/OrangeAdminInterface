@@ -33,8 +33,8 @@ class AccountPanel extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final cardBg = isDark ? const Color(0xFF111821) : Colors.white;
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
     final text = isDark ? Colors.white : Colors.black;
 
     return Container(
@@ -64,7 +64,7 @@ class AccountPanel extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: sel ? Colors.white : text,
                 ),
-                selectedColor: const Color(0xFFC95B4C),
+                selectedColor: const Color(0xFFF57C00),
                 onSelected: (_) => onChanged(a),
               );
             }).toList(),

@@ -29,8 +29,8 @@ class TermineWochenansicht extends StatelessWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = Theme.of(context).scaffoldBackgroundColor;
-    final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
-    final inner = isDark ? const Color(0xFF141D27) : Colors.white;
+    final panel = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFB74D);
+    final inner = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     final filtered = ctrl.termine
         .where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName))

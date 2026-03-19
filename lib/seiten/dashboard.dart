@@ -21,9 +21,9 @@ class DashboardPage extends StatelessWidget {
 
   const DashboardPage({super.key, required this.benutzername});
 
-  static const _orange = Color(0xFFCC5C4C);
-  static const _blue = Color(0xFF335776);
-  static const _violet = Color(0xFF6E61A8);
+  static const _orange = Color(0xFFF57C00);
+  static const _blue = Color(0xFFFFB74D);
+  static const _violet = Color(0xFFFFB74D);
 
   @override
   Widget build(BuildContext context) {
@@ -33,9 +33,9 @@ class DashboardPage extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     final bg = Theme.of(context).scaffoldBackgroundColor;
-    final surface = isDark ? const Color(0xFF111821) : Colors.white;
-    final surface2 = isDark ? const Color(0xFF141D27) : Colors.white;
-    final border = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(18);
+    final surface = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final surface2 = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     final ctrl = context.watch<TerminplanController>();
     final messenger = ScaffoldMessenger.of(context);
@@ -223,7 +223,7 @@ class DashboardPage extends StatelessWidget {
                               icon: Icons.sync,
                               label: t.kpiChanges,
                               value: ctrl.aenderungen.length.toString(),
-                              accent: const Color(0xFF2E7DDB),
+                              accent: const Color(0xFFFFB74D),
                             ),
                           ),
                         ],
@@ -293,7 +293,7 @@ class _WelcomeHeader extends StatelessWidget {
             TextSpan(text: t.welcome, style: baseStyle),
             TextSpan(
               text: ', $benutzername!',
-              style: baseStyle?.copyWith(color: const Color(0xFFCC5C4C)),
+              style: baseStyle?.copyWith(color: const Color(0xFFF57C00)),
             ),
           ],
         ),

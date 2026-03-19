@@ -75,7 +75,7 @@ class _Rail extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0E1420) : const Color(0xFFF3F4F6);
+    final bg = isDark ? const Color(0xFF121212) : const Color(0xFFFFFFFF);
 
     return Container(
       width: 240,
@@ -164,7 +164,7 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
@@ -175,12 +175,12 @@ class _NavItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: selected
-                ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40)
+                ? const Color(0xFFF57C00).withAlpha(isDark ? 55 : 40)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: selected
-                  ? const Color(0xFFC95B4C).withAlpha(110)
+                  ? const Color(0xFFF57C00).withAlpha(110)
                   : border,
             ),
           ),

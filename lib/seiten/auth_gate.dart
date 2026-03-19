@@ -78,7 +78,7 @@ class _AuthGateState extends State<AuthGate> {
     final t = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0E14),
+      backgroundColor: const Color(0xFF121212),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -86,9 +86,9 @@ class _AuthGateState extends State<AuthGate> {
             padding: const EdgeInsets.all(18),
             margin: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF121826),
+              color: const Color(0xFF1E1E1E),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: const Color(0xFF2C2C2C)),
               boxShadow: const [
                 BoxShadow(
                   color: Color.fromARGB(60, 0, 0, 0),
@@ -117,7 +117,7 @@ class _AuthGateState extends State<AuthGate> {
                     labelText: t.username,
                     labelStyle: const TextStyle(color: Colors.white70),
                     filled: true,
-                    fillColor: const Color(0xFF0F131B),
+                    fillColor: const Color(0xFF1E1E1E),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -134,7 +134,7 @@ class _AuthGateState extends State<AuthGate> {
                     labelText: t.password,
                     labelStyle: const TextStyle(color: Colors.white70),
                     filled: true,
-                    fillColor: const Color(0xFF0F131B),
+                    fillColor: const Color(0xFF1E1E1E),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -148,7 +148,7 @@ class _AuthGateState extends State<AuthGate> {
                   child: ElevatedButton(
                     onPressed: _loading ? null : _login,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFC95B4C),
+                      backgroundColor: const Color(0xFFF57C00),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),

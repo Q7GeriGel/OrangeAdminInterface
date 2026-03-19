@@ -18,7 +18,7 @@ class KundeDialog extends StatefulWidget {
 }
 
 class _KundeDialogState extends State<KundeDialog> {
-  static const _orange = Color(0xFFCC5C4C);
+  static const _orange = Color(0xFFF57C00);
 
   late final TextEditingController nameCtrl;
   late final TextEditingController telCtrl;

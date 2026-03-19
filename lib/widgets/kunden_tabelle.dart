@@ -65,8 +65,8 @@ class _KundenTabelleState extends State<KundenTabelle> {
     final scheme = Theme.of(context).colorScheme;
 
     final headerBg = isDark ? const Color(0xFF0F131B) : const Color(0xFFF2F4F7);
-    final rowBg = isDark ? const Color(0xFF141D27) : Colors.white;
-    final rowAltBg = isDark ? const Color(0xFF111821) : const Color(0xFFF9FAFB);
+    final rowBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final rowAltBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9FAFB);
 
     final headerStyle = TextStyle(
       color: isDark ? Colors.white.withAlpha(235) : Colors.black.withAlpha(210),
@@ -86,8 +86,8 @@ class _KundenTabelleState extends State<KundenTabelle> {
       fontSize: 13,
     );
 
-    final divider = isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(14);
-    final headerDivider = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(16);
+    final divider = isDark ? const Color(0xFF2C2C2C) : Colors.black.withAlpha(14);
+    final headerDivider = isDark ? const Color(0xFF2C2C2C) : Colors.black.withAlpha(16);
 
     final totalRows = math.max(widget.kunden.length, widget.minLinien);
 
@@ -142,7 +142,7 @@ class _KundenTabelleState extends State<KundenTabelle> {
                                 k.stammkunde ? Icons.check_box : Icons.check_box_outline_blank,
                                 size: 20,
                                 color: k.stammkunde
-                                    ? const Color(0xFF2E7D32)
+                                    ? const Color(0xFFFFB74D)
                                     : (isDark
                                         ? Colors.white.withAlpha(140)
                                         : Colors.black.withAlpha(120)),

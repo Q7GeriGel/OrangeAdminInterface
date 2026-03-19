@@ -3,36 +3,52 @@ import 'app_tokens.dart';
 
 class AppTheme {
   static ThemeData light() {
+    const surface = Color(0xFFFFFFFF);
+    const onSurface = Colors.black87;
+    const outline = Color(0xFFE0E0E0);
+
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.orange,
       brightness: Brightness.light,
     ).copyWith(
       primary: AppColors.orange,
       secondary: AppColors.bluePanel,
+      surface: surface,
+      onSurface: onSurface,
+      onPrimary: Colors.white,
+      onSecondary: Colors.black,
+      outline: outline,
+      outlineVariant: outline,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       brightness: Brightness.light,
-      scaffoldBackgroundColor: const Color(0xFFF6F7FB),
+      scaffoldBackgroundColor: const Color(0xFFFFFFFF),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFFF6F7FB),
+        backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         foregroundColor: scheme.onSurface,
       ),
-      dividerColor: scheme.outlineVariant.withOpacity(0.4),
-
+      dividerColor: const Color(0xFFE0E0E0),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: const Color(0xFFFFFFFF),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.r14),
           borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.r14),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.r14),
+          borderSide: const BorderSide(color: AppColors.orange),
+        ),
       ),
-
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.all(AppColors.orange),
@@ -51,10 +67,9 @@ class AppTheme {
   }
 
   static ThemeData dark() {
-    // 🔥 Statistik-Look: dunkel, leicht bläulich, Orange-Akzent
-    const bg = Color(0xFF0B0F14);
-    const surface = Color(0xFF111821);
-    const surface2 = Color(0xFF141D27);
+    const bg = Color(0xFF121212);
+    const surface = Color(0xFF1E1E1E);
+    const outline = Color(0xFF2C2C2C);
 
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.orange,
@@ -63,6 +78,11 @@ class AppTheme {
       primary: AppColors.orange,
       secondary: AppColors.bluePanel,
       surface: surface,
+      onSurface: Colors.white70,
+      onPrimary: Colors.white,
+      onSecondary: Colors.black,
+      outline: outline,
+      outlineVariant: outline,
     );
 
     return ThemeData(
@@ -75,37 +95,41 @@ class AppTheme {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-      dividerColor: scheme.outlineVariant.withOpacity(0.35),
-
-      // nicer default texts
+      dividerColor: const Color(0xFF2C2C2C),
       textTheme: ThemeData.dark().textTheme.apply(
             bodyColor: scheme.onSurface,
             displayColor: scheme.onSurface,
           ),
-
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface2,
+        fillColor: surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.r14),
           borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.r14),
+          borderSide: const BorderSide(color: Color(0xFF2C2C2C)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.r14),
+          borderSide: const BorderSide(color: AppColors.orange),
+        ),
       ),
-
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
               return AppColors.orange.withOpacity(0.22);
             }
-            return surface2;
+            return surface;
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) return Colors.white;
-            return Colors.white.withOpacity(0.80);
+            return Colors.white70;
           }),
           side: WidgetStateProperty.all(
-            BorderSide(color: scheme.outlineVariant.withOpacity(0.35)),
+            const BorderSide(color: Color(0xFF2C2C2C)),
           ),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
@@ -114,7 +138,6 @@ class AppTheme {
           ),
         ),
       ),
-
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.all(AppColors.orange),

@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Brand / Accent (statisch nutzbar UND über of(context) kompatibel)
-  static const Color orange = Color(0xFFC95B4C);
-  static const Color orangeSoft = Color(0xFFFFE1DC);
+  static const Color orange = Color(0xFFF57C00);
+  static const Color orangeSoft = Color(0xFFFFB74D);
 
   // Panels / Accent 2
-  static const Color bluePanel = Color(0xFF355B7A);
+  static const Color bluePanel = Color(0xFFFFB74D);
 
   // Utility
-  static const Color muted = Color(0xFF6B7280);
+  static const Color muted = Colors.grey;
 
   final ColorScheme scheme;
   final bool isDark;
@@ -23,8 +23,8 @@ class AppColors {
 
   // Komfort-Getter (damit überall gleich)
   Color get surface => scheme.surface;
-  Color get surface2 => isDark ? scheme.surface.withOpacity(0.85) : scheme.surface;
-  Color get border => scheme.outlineVariant.withOpacity(isDark ? 0.35 : 0.55);
+  Color get surface2 => isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+  Color get border => isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
   Color get onSurface => scheme.onSurface;
 

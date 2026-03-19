@@ -16,7 +16,7 @@ class WeeklyHeader extends StatelessWidget {
   final VoidCallback onToday;
   final VoidCallback onNext;
 
-  static const _orange = Color(0xFFCC5C4C);
+  static const _orange = Color(0xFFF57C00);
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class WeeklyHeader extends StatelessWidget {
     final rangeText = '$rangeStart – $rangeEnd';
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? Colors.white12 : Colors.black.withAlpha(25);
+    final borderColor = isDark ? const Color(0xFF2C2C2C) : Colors.black.withAlpha(25);
 
     return Row(
       mainAxisSize: MainAxisSize.min,

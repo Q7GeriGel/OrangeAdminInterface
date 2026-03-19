@@ -85,9 +85,9 @@ class _StatistikSeiteState extends State<StatistikSeite> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final pageBg = isDark ? const Color(0xFF0B0E14) : const Color(0xFFF4F4F4);
-    final cardBg = isDark ? const Color(0xFF121826) : Colors.white;
-    final border = isDark ? Colors.white10 : Colors.black12;
+    final pageBg = isDark ? const Color(0xFF121212) : const Color(0xFFF4F4F4);
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final border = isDark ? Colors.white10 : const Color(0xFFE0E0E0);
     final textMain = isDark ? Colors.white : Colors.black;
     final textSub = isDark ? Colors.white70 : Colors.black54;
 
@@ -239,7 +239,7 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Row(
       children: [
@@ -257,7 +257,7 @@ class _TopBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.black12,
+              color: isDark ? Colors.white10 : const Color(0xFFE0E0E0),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: border),
             ),
@@ -283,7 +283,7 @@ class _TopBar extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : Colors.black12,
+            color: isDark ? Colors.white10 : const Color(0xFFE0E0E0),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: border),
           ),
@@ -356,7 +356,7 @@ class _LeftPanel extends StatelessWidget {
       return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
     });
 
-    final barColor = const Color(0xFFCC5C4C).withOpacity(isDark ? 0.92 : 0.95);
+    final barColor = const Color(0xFFF57C00).withOpacity(isDark ? 0.92 : 0.95);
     final dayLabels = [
       t.monShort,
       t.tueShort,
@@ -434,7 +434,7 @@ class _LeftPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Divider(color: isDark ? Colors.white10 : Colors.black12),
+          Divider(color: isDark ? Colors.white10 : const Color(0xFFE0E0E0)),
           const SizedBox(height: 14),
           Text(
             t.idleHeatmapTitle,
@@ -456,12 +456,12 @@ class _LeftPanel extends StatelessWidget {
             children: [
               _LegendDot(
                 label: t.legendIdle,
-                color: const Color(0xFFCC5C4C).withOpacity(0.8),
+                color: const Color(0xFFF57C00).withOpacity(0.8),
                 textColor: textSub,
               ),
               _LegendDot(
                 label: t.legendBooked,
-                color: const Color(0xFF2E7DDB).withOpacity(0.8),
+                color: const Color(0xFFFFB74D).withOpacity(0.8),
                 textColor: textSub,
               ),
             ],
@@ -472,7 +472,7 @@ class _LeftPanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDark ? Colors.white10 : Colors.black.withAlpha(8),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+              border: Border.all(color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0)),
             ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -528,8 +528,8 @@ class _LeftPanel extends StatelessWidget {
                             final busy = _busyAt(slotStart, slotEnd);
 
                             final color = busy
-                                ? const Color(0xFF2E7DDB).withOpacity(0.75)
-                                : const Color(0xFFCC5C4C).withOpacity(0.75);
+                                ? const Color(0xFFFFB74D).withOpacity(0.75)
+                                : const Color(0xFFF57C00).withOpacity(0.75);
 
                             return Container(
                               width: 60,
@@ -670,7 +670,7 @@ class _RightPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Divider(color: isDark ? Colors.white10 : Colors.black12),
+          Divider(color: isDark ? Colors.white10 : const Color(0xFFE0E0E0)),
           const SizedBox(height: 10),
           Text(
             t.freeSlotsTop,
@@ -689,7 +689,7 @@ class _RightPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white10 : Colors.black.withAlpha(8),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                  border: Border.all(color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0)),
                 ),
                 child: Row(
                   children: [
@@ -710,7 +710,7 @@ class _RightPanel extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFCC5C4C).withOpacity(0.75),
+                        color: const Color(0xFFF57C00).withOpacity(0.75),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -749,7 +749,7 @@ class _MetricTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? Colors.white10 : Colors.black.withAlpha(8);
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     final textMain = isDark ? Colors.white : Colors.black;
     final textSub = isDark ? Colors.white70 : Colors.black54;
@@ -767,7 +767,7 @@ class _MetricTile extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.black.withAlpha(10),
+              color: isDark ? Colors.white10 : const Color(0xFFE0E0E0),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: border),
             ),

@@ -45,13 +45,13 @@ class AktuelleAenderungenBox extends StatelessWidget {
           lower.contains('kaldır');
 
       if (isCancel) {
-        accent = Colors.redAccent;
+        accent = Colors.red;
       } else if (isMove) {
-        accent = Colors.orangeAccent;
+        accent = const Color(0xFFFFB74D);
       } else if (isNew) {
-        accent = const Color(0xFF2E7D32);
+        accent = const Color(0xFFFFB74D);
       } else if (isDelete) {
-        accent = const Color(0xFFB71C1C);
+        accent = const Color(0xFFF57C00);
       }
 
       return DashboardEntry(s, accent: accent);

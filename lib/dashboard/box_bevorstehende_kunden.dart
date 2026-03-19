@@ -75,11 +75,11 @@ class BevorstehendeKundenBox extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status) {
       case Termin.statusBestaetigt:
-        return const Color(0xFF2E7D32);
+        return const Color(0xFFFFB74D);
       case Termin.statusAbgesagt:
         return const Color(0xFFC62828);
       default:
-        return const Color(0xFF1565C0);
+        return const Color(0xFFF57C00);
     }
   }
 }

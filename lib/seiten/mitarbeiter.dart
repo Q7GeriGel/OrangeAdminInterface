@@ -101,8 +101,8 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
 
     const panelBlue = AppColors.bluePanel;
 
-    final innerCard = isDark ? const Color(0xFF111821) : Colors.white;
-    final notesFill = isDark ? const Color(0xFF141D27) : const Color(0xFFF6F6F6);
+    final innerCard = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final notesFill = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
     final text = isDark ? Colors.white : Colors.black;
     final sub = isDark ? Colors.white70 : Colors.black54;
 
@@ -165,7 +165,7 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
                           icon: const Icon(Icons.save_outlined),
                           label: Text(t.save),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFB5A7),
+                            backgroundColor: const Color(0xFFFFB74D),
                             foregroundColor: Colors.black,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -331,7 +331,7 @@ class _UserHeaderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final cardBg = isDark ? const Color(0xFF111821) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final title = isDark ? Colors.white : Colors.black;
     final sub = isDark ? Colors.white70 : Colors.black54;
 
@@ -344,7 +344,7 @@ class _UserHeaderCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundColor: const Color(0xFFFFE0D7),
+              backgroundColor: const Color(0xFFFFB74D),
               child: Icon(Icons.person, color: Colors.black.withAlpha(160)),
             ),
             const SizedBox(width: 14),
@@ -400,7 +400,7 @@ class _InnerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final border = isDark ? Colors.white.withAlpha(16) : Colors.black.withAlpha(10);
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.r18),
@@ -415,7 +415,7 @@ class _InnerPanel extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(titleIcon, color: const Color(0xFFC95B4C)),
+                  Icon(titleIcon, color: const Color(0xFFF57C00)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -452,8 +452,8 @@ class _SlotTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF141D27) : const Color(0xFFF5F6F8);
-    final border = isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(10);
+    final bg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
     final text = isDark ? Colors.white : Colors.black;
 
     return Container(
@@ -469,7 +469,7 @@ class _SlotTile extends StatelessWidget {
             width: 6,
             height: 24,
             decoration: BoxDecoration(
-              color: const Color(0xFF335776),
+              color: const Color(0xFFFFB74D),
               borderRadius: BorderRadius.circular(99),
             ),
           ),

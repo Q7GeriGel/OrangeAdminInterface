@@ -89,7 +89,7 @@ class DashboardPanels extends StatelessWidget {
                     final label =
                         '${DateFormat('HH:mm').format(f.start)} – ${DateFormat('HH:mm').format(f.end)}';
                     return _RowCard(
-                      leadingColor: const Color(0xFF355573),
+                      leadingColor: const Color(0xFFFFB74D),
                       title: label,
                       subtitle: '',
                       rightChip: const _SmallPill(text: 'frei'),
@@ -105,9 +105,9 @@ class DashboardPanels extends StatelessWidget {
   }
 
   Color _colorForStatus(String status) {
-    if (status == Termin.statusBestaetigt) return const Color(0xFF2E7D32);
+    if (status == Termin.statusBestaetigt) return const Color(0xFFFFB74D);
     if (status == Termin.statusAbgesagt) return const Color(0xFFC62828);
-    return const Color(0xFF355573);
+    return const Color(0xFFFFB74D);
   }
 }
 
@@ -122,7 +122,7 @@ class _Panel extends StatelessWidget {
     required this.child,
   });
 
-  static const Color _panelBlue = Color(0xFF355573);
+  static const Color _panelBlue = Color(0xFFFFB74D);
   static const Color _headerOrange = Color(0xFFC95D4B);
 
   @override
@@ -338,7 +338,7 @@ class _StatusChip extends StatelessWidget {
       fg = const Color(0xFF1B5E20);
     } else if (status == Termin.statusAbgesagt) {
       bg = const Color(0xFFFCE8E6);
-      fg = const Color(0xFFB71C1C);
+      fg = const Color(0xFFF57C00);
     } else {
       bg = const Color(0xFFEAF1FF);
       fg = const Color(0xFF1E3A8A);

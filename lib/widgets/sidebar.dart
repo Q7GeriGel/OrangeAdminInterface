@@ -28,8 +28,8 @@ class Sidebar extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final bg = isDark ? const Color(0xFF0E1420) : const Color(0xFFF3F4F6);
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final bg = isDark ? const Color(0xFF121212) : const Color(0xFFFFFFFF);
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     final items = [
       (_t(l, 'Dashboard', (x) => x.dashboard), Icons.dashboard_outlined),
@@ -72,10 +72,10 @@ class Sidebar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       decoration: BoxDecoration(
                         color: selected
-                            ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40)
+                            ? const Color(0xFFF57C00).withAlpha(isDark ? 55 : 40)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: selected ? const Color(0xFFC95B4C).withAlpha(90) : border),
+                        border: Border.all(color: selected ? const Color(0xFFF57C00).withAlpha(90) : border),
                       ),
                       child: Row(
                         children: [

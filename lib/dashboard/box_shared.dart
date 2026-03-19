@@ -134,7 +134,7 @@ class _BoxSharedState extends State<BoxShared> {
 // -------------------
 
 class DashboardUi {
-  static const headerOrange = Color(0xFFCC5C4C);
+  static const headerOrange = Color(0xFFF57C00);
 
   static const outerRadius = 22.0;
   static const innerRadius = 18.0;
@@ -171,7 +171,7 @@ class DashboardPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(10),
+        color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -229,11 +229,11 @@ class _DashboardBoxState extends State<DashboardBox> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
 
-    final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
-    final inner = isDark ? const Color(0xFF141D27) : Colors.white;
+    final panel = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFB74D);
+    final inner = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
-    final border = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(18);
-    final tileBorder = isDark ? Colors.white.withAlpha(14) : const Color(0xFFE9E9E9);
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
+    final tileBorder = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE9E9E9);
 
     return SizedBox(
       height: widget.height,
@@ -367,7 +367,7 @@ class _EntryTile extends StatelessWidget {
     final clickable = e.onTap != null;
     final subtitle = (e.subtitle ?? '').trim();
 
-    final tileBg = isDark ? const Color(0xFF141D27) : Colors.white;
+    final tileBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     return Material(
       color: tileBg,
@@ -376,7 +376,7 @@ class _EntryTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         onTap: e.onTap,
         mouseCursor: clickable ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        splashColor: Colors.black.withAlpha(10),
+        splashColor: const Color(0xFFE0E0E0),
         hoverColor: Colors.black.withAlpha(6),
         child: Container(
           height: DashboardUi.rowHeight,
@@ -446,7 +446,7 @@ class _EmptyLine extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
 
-    final tileBg = isDark ? const Color(0xFF141D27) : Colors.white;
+    final tileBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     return Align(
       alignment: Alignment.topCenter,

@@ -36,14 +36,14 @@ class StaffConfig {
   static const String _usersKey = 'fo_login_users_v2';
 
   static const Map<String, Color> _seedColors = {
-    'Serkan': Color(0xFFCC5C4C),
-    'Sedat': Color(0xFF2E7D32),
-    'Samet': Color(0xFF335776),
+    'Serkan': Color(0xFFF57C00),
+    'Sedat': Color(0xFFFFB74D),
+    'Samet': Color(0xFFFFB74D),
   };
 
   static const List<Color> _dynamicPalette = [
-    Color(0xFF6E61A8),
-    Color(0xFF2E7DDB),
+    Color(0xFFFFB74D),
+    Color(0xFFFFB74D),
     Color(0xFF00897B),
     Color(0xFF8E24AA),
     Color(0xFF5D4037),
