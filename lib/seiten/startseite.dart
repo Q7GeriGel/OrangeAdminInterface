@@ -86,11 +86,15 @@ class _Rail extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
-              child: Text(
-                t.appTitle,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Image.asset(
+                  isDark
+                      ? 'assets/LogoOrangeLight.png'
+                      : 'assets/LogoOrangeDark.png',
+                  height: 200,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerLeft,
                 ),
               ),
             ),
@@ -164,7 +168,8 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
+    final border =
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
@@ -175,7 +180,7 @@ class _NavItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: selected
-                ? const Color(0xFFF57C00).withAlpha(isDark ? 55 : 40)
+                ? const Color(0xFFF57C00).withAlpha(isDark ? 32 : 18)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
