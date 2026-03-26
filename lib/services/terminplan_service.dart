@@ -21,7 +21,13 @@ class TerminplanService {
   }
 
   DateTime _snapToHalfHour(DateTime value) {
-    final clean = DateTime(value.year, value.month, value.day, value.hour, value.minute);
+    final clean = DateTime(
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+    );
     final remainder = clean.minute % 30;
 
     if (remainder == 0) {
@@ -29,6 +35,53 @@ class TerminplanService {
     }
 
     return clean.add(Duration(minutes: 30 - remainder));
+  }
+
+  bool _overlaps(
+    DateTime aStart,
+    DateTime aEnd,
+    DateTime bStart,
+    DateTime bEnd,
+  ) {
+    return aStart.isBefore(bEnd) && aEnd.isAfter(bStart);
+  }
+
+  bool _hasConflict({
+    required List<Termin> termine,
+    required DateTime start,
+    required DateTime end,
+    required String mitarbeiterName,
+    String? ignoreId,
+  }) {
+    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(mitarbeiterName);
+
+    return termine.any((t) {
+      if (ignoreId != null && t.id == ignoreId) return false;
+      if (t.status == Termin.statusAbgesagt) return false;
+
+      final terminMitarbeiter = StaffConfig.normalizeEmployee(t.mitarbeiterName);
+      if (terminMitarbeiter != normalizedMitarbeiter) return false;
+
+      return _overlaps(start, end, t.start, t.end);
+    });
+  }
+
+  void _throwIfConflict({
+    required List<Termin> termine,
+    required DateTime start,
+    required DateTime end,
+    required String mitarbeiterName,
+    String? ignoreId,
+  }) {
+    if (_hasConflict(
+      termine: termine,
+      start: start,
+      end: end,
+      mitarbeiterName: mitarbeiterName,
+      ignoreId: ignoreId,
+    )) {
+      throw 'Dieser Slot ist bereits belegt.';
+    }
   }
 
   Future<Termin> createTerminAt(
@@ -47,12 +100,20 @@ class TerminplanService {
     final list = await ladeWoche(monday);
 
     final normalizedMitarbeiter = StaffConfig.normalizeEmployee(mitarbeiterName);
+    final newEnd = normalizedStart.add(Duration(minutes: minutes));
+
+    _throwIfConflict(
+      termine: list,
+      start: normalizedStart,
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+    );
 
     final id = 'new_${DateTime.now().millisecondsSinceEpoch}';
     final t = Termin(
       id: id,
       start: normalizedStart,
-      end: normalizedStart.add(Duration(minutes: minutes)),
+      end: newEnd,
       kundeName: kundeName,
       mitarbeiterName: normalizedMitarbeiter,
       status: status,
@@ -84,12 +145,22 @@ class TerminplanService {
 
     final old = list[idx];
     final dur = old.end.difference(old.start);
+    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(old.mitarbeiterName);
+    final newEnd = newStart.add(dur);
+
+    _throwIfConflict(
+      termine: list,
+      start: newStart,
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+      ignoreId: id,
+    );
 
     list[idx] = old.copyWith(
       start: newStart,
-      end: newStart.add(dur),
-      mitarbeiterName: StaffConfig.normalizeEmployee(old.mitarbeiterName),
-      color: old.color ?? StaffConfig.colorOf(old.mitarbeiterName),
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+      color: old.color ?? StaffConfig.colorOf(normalizedMitarbeiter),
     );
 
     list.sort((a, b) => a.start.compareTo(b.start));
@@ -103,13 +174,41 @@ class TerminplanService {
     if (idx == -1) return;
 
     final old = list[idx];
+    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(old.mitarbeiterName);
+    final newEnd = old.start.add(Duration(minutes: minutes));
+
+    _throwIfConflict(
+      termine: list,
+      start: old.start,
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+      ignoreId: id,
+    );
+
     list[idx] = old.copyWith(
-      end: old.start.add(Duration(minutes: minutes)),
-      mitarbeiterName: StaffConfig.normalizeEmployee(old.mitarbeiterName),
-      color: old.color ?? StaffConfig.colorOf(old.mitarbeiterName),
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+      color: old.color ?? StaffConfig.colorOf(normalizedMitarbeiter),
     );
 
     list.sort((a, b) => a.start.compareTo(b.start));
     await speichereWoche(monday, list);
+  }
+
+  Future<void> updateStatus(String id, String status, DateTime anyDate) async {
+    final monday = mondayOf(anyDate);
+    final list = await ladeWoche(monday);
+    final idx = list.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+
+    final old = list[idx];
+    list[idx] = old.copyWith(status: status);
+
+    list.sort((a, b) => a.start.compareTo(b.start));
+    await speichereWoche(monday, list);
+  }
+
+  Future<void> cancelTermin(String id, DateTime anyDate) async {
+    await updateStatus(id, Termin.statusAbgesagt, anyDate);
   }
 }

@@ -20,12 +20,10 @@ class TerminplanController extends ChangeNotifier {
     goToday();
   }
 
-  // Woche
   DateTime currentWeekMonday = DateTime.now();
   bool loading = false;
   List<Termin> termine = [];
 
-  // Dashboard (heute)
   bool lade = false;
   List<FreiesZeitfenster> freie = [];
   List<String> aenderungen = [];
@@ -64,7 +62,9 @@ class TerminplanController extends ChangeNotifier {
 
     final dayTermine = termine.where((t) {
       final s = t.start;
-      return s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      final sameDay = s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      if (!sameDay) return false;
+      return t.status != Termin.statusAbgesagt;
     }).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
 
@@ -96,13 +96,14 @@ class TerminplanController extends ChangeNotifier {
   }
 
   List<Termin> kommendeHeute({int limit = 6}) {
-    final now = DateTime.now();
-    final d0 = DateTime(now.year, now.month, now.day);
+    final d0 = DateTime.now();
+    final today = DateTime(d0.year, d0.month, d0.day);
 
     final list = termine.where((t) {
       final s = t.start;
-      final isToday = s.year == d0.year && s.month == d0.month && s.day == d0.day;
-      return isToday && t.start.isAfter(now.subtract(const Duration(minutes: 1)));
+      final isToday = s.year == today.year && s.month == today.month && s.day == today.day;
+      if (!isToday) return false;
+      return t.status != Termin.statusAbgesagt;
     }).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
 
@@ -130,12 +131,14 @@ class TerminplanController extends ChangeNotifier {
 
     final today = termine.where((t) {
       final s = t.start;
-      return s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      final sameDay = s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      if (!sameDay) return false;
+      return t.status != Termin.statusAbgesagt;
     }).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
 
     final next = today.where((t) => t.start.isAfter(now)).toList();
-    final t = (next.isNotEmpty) ? next.first : (today.isNotEmpty ? today.first : null);
+    final t = next.isNotEmpty ? next.first : null;
 
     if (t == null) return 'Kein Termin heute';
 
@@ -173,16 +176,12 @@ class TerminplanController extends ChangeNotifier {
     );
 
     _log('Neu: ${created.kundeName} • ${DateFormat('HH:mm').format(created.start)}');
-
-    // ✅ FIX: immer die Woche laden, in der der Termin liegt
     await ladeWoche(_mondayOf(start));
   }
 
   Future<void> createTerminAt(DateTime slotStart) async {
     final created = await service.createTerminAt(slotStart);
     _log('Neu: ${created.kundeName} • ${DateFormat('HH:mm').format(created.start)}');
-
-    // ✅ FIX: Woche vom Slot laden
     await ladeWoche(_mondayOf(slotStart));
   }
 
@@ -226,16 +225,26 @@ class TerminplanController extends ChangeNotifier {
   Future<void> toggleStatus(String id) async {
     final idx = termine.indexWhere((x) => x.id == id);
     if (idx == -1) return;
+
     final t = termine[idx];
-    _log('Status geändert: ${t.kundeName}');
-    notifyListeners();
+    final nextStatus = t.status == Termin.statusOffen
+        ? Termin.statusBestaetigt
+        : t.status == Termin.statusBestaetigt
+            ? Termin.statusAbgesagt
+            : Termin.statusOffen;
+
+    await service.updateStatus(id, nextStatus, t.start);
+    _log('Status geändert: ${t.kundeName} → $nextStatus');
+    await ladeWoche(currentWeekMonday);
   }
 
   Future<void> cancelTermin(String id) async {
     final idx = termine.indexWhere((x) => x.id == id);
     if (idx == -1) return;
+
     final t = termine[idx];
+    await service.cancelTermin(id, t.start);
     _log('Storniert: ${t.kundeName}');
-    notifyListeners();
+    await ladeWoche(currentWeekMonday);
   }
 }

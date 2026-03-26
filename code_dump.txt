@@ -112,14 +112,14 @@ class StaffConfig {
   static const String _usersKey = 'fo_login_users_v2';
 
   static const Map<String, Color> _seedColors = {
-    'Serkan': Color(0xFFCC5C4C),
-    'Sedat': Color(0xFF2E7D32),
-    'Samet': Color(0xFF335776),
+    'Serkan': Color(0xFFF57C00),
+    'Sedat': Color(0xFFFFB74D),
+    'Samet': Color(0xFFFFB74D),
   };
 
   static const List<Color> _dynamicPalette = [
-    Color(0xFF6E61A8),
-    Color(0xFF2E7DDB),
+    Color(0xFFFFB74D),
+    Color(0xFFFFB74D),
     Color(0xFF00897B),
     Color(0xFF8E24AA),
     Color(0xFF5D4037),
@@ -1065,12 +1065,10 @@ class TerminplanController extends ChangeNotifier {
     goToday();
   }
 
-  // Woche
   DateTime currentWeekMonday = DateTime.now();
   bool loading = false;
   List<Termin> termine = [];
 
-  // Dashboard (heute)
   bool lade = false;
   List<FreiesZeitfenster> freie = [];
   List<String> aenderungen = [];
@@ -1109,7 +1107,9 @@ class TerminplanController extends ChangeNotifier {
 
     final dayTermine = termine.where((t) {
       final s = t.start;
-      return s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      final sameDay = s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      if (!sameDay) return false;
+      return t.status != Termin.statusAbgesagt;
     }).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
 
@@ -1141,13 +1141,14 @@ class TerminplanController extends ChangeNotifier {
   }
 
   List<Termin> kommendeHeute({int limit = 6}) {
-    final now = DateTime.now();
-    final d0 = DateTime(now.year, now.month, now.day);
+    final d0 = DateTime.now();
+    final today = DateTime(d0.year, d0.month, d0.day);
 
     final list = termine.where((t) {
       final s = t.start;
-      final isToday = s.year == d0.year && s.month == d0.month && s.day == d0.day;
-      return isToday && t.start.isAfter(now.subtract(const Duration(minutes: 1)));
+      final isToday = s.year == today.year && s.month == today.month && s.day == today.day;
+      if (!isToday) return false;
+      return t.status != Termin.statusAbgesagt;
     }).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
 
@@ -1175,12 +1176,14 @@ class TerminplanController extends ChangeNotifier {
 
     final today = termine.where((t) {
       final s = t.start;
-      return s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      final sameDay = s.year == d0.year && s.month == d0.month && s.day == d0.day;
+      if (!sameDay) return false;
+      return t.status != Termin.statusAbgesagt;
     }).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
 
     final next = today.where((t) => t.start.isAfter(now)).toList();
-    final t = (next.isNotEmpty) ? next.first : (today.isNotEmpty ? today.first : null);
+    final t = next.isNotEmpty ? next.first : null;
 
     if (t == null) return 'Kein Termin heute';
 
@@ -1218,16 +1221,12 @@ class TerminplanController extends ChangeNotifier {
     );
 
     _log('Neu: ${created.kundeName} • ${DateFormat('HH:mm').format(created.start)}');
-
-    // ✅ FIX: immer die Woche laden, in der der Termin liegt
     await ladeWoche(_mondayOf(start));
   }
 
   Future<void> createTerminAt(DateTime slotStart) async {
     final created = await service.createTerminAt(slotStart);
     _log('Neu: ${created.kundeName} • ${DateFormat('HH:mm').format(created.start)}');
-
-    // ✅ FIX: Woche vom Slot laden
     await ladeWoche(_mondayOf(slotStart));
   }
 
@@ -1271,17 +1270,27 @@ class TerminplanController extends ChangeNotifier {
   Future<void> toggleStatus(String id) async {
     final idx = termine.indexWhere((x) => x.id == id);
     if (idx == -1) return;
+
     final t = termine[idx];
-    _log('Status geändert: ${t.kundeName}');
-    notifyListeners();
+    final nextStatus = t.status == Termin.statusOffen
+        ? Termin.statusBestaetigt
+        : t.status == Termin.statusBestaetigt
+            ? Termin.statusAbgesagt
+            : Termin.statusOffen;
+
+    await service.updateStatus(id, nextStatus, t.start);
+    _log('Status geändert: ${t.kundeName} → $nextStatus');
+    await ladeWoche(currentWeekMonday);
   }
 
   Future<void> cancelTermin(String id) async {
     final idx = termine.indexWhere((x) => x.id == id);
     if (idx == -1) return;
+
     final t = termine[idx];
+    await service.cancelTermin(id, t.start);
     _log('Storniert: ${t.kundeName}');
-    notifyListeners();
+    await ladeWoche(currentWeekMonday);
   }
 }
 
@@ -1335,13 +1344,13 @@ class AktuelleAenderungenBox extends StatelessWidget {
           lower.contains('kaldır');
 
       if (isCancel) {
-        accent = Colors.redAccent;
+        accent = Colors.red;
       } else if (isMove) {
-        accent = Colors.orangeAccent;
+        accent = const Color(0xFFFFB74D);
       } else if (isNew) {
-        accent = const Color(0xFF2E7D32);
+        accent = const Color(0xFFFFB74D);
       } else if (isDelete) {
-        accent = const Color(0xFFB71C1C);
+        accent = const Color(0xFFF57C00);
       }
 
       return DashboardEntry(s, accent: accent);
@@ -1356,7 +1365,6 @@ class AktuelleAenderungenBox extends StatelessWidget {
     );
   }
 }
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\dashboard\box_bevorstehende_kunden.dart =====
@@ -1384,6 +1392,7 @@ class BevorstehendeKundenBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final ctrl = context.watch<TerminplanController>();
+    final messenger = ScaffoldMessenger.of(context);
     final list = ctrl.kommendeHeute(limit: 6);
 
     Future<void> openDetails(Termin x) async {
@@ -1391,17 +1400,33 @@ class BevorstehendeKundenBox extends StatelessWidget {
         context: context,
         termin: x,
         canEdit: true,
-        onMove: (newTime) {
-          final newStart = DateTime(
-            x.start.year,
-            x.start.month,
-            x.start.day,
-            newTime.hour,
-            newTime.minute,
-          );
-          ctrl.moveTermin(x.id, newStart);
+        onMove: (newTime) async {
+          try {
+            final newStart = DateTime(
+              x.start.year,
+              x.start.month,
+              x.start.day,
+              newTime.hour,
+              newTime.minute,
+            );
+            await ctrl.moveTermin(x.id, newStart);
+          } catch (e) {
+            if (!context.mounted) return;
+            messenger.showSnackBar(
+              SnackBar(content: Text(e.toString())),
+            );
+          }
         },
-        onChangeDuration: (minutes) => ctrl.updateDuration(x.id, minutes),
+        onChangeDuration: (minutes) async {
+          try {
+            await ctrl.updateDuration(x.id, minutes);
+          } catch (e) {
+            if (!context.mounted) return;
+            messenger.showSnackBar(
+              SnackBar(content: Text(e.toString())),
+            );
+          }
+        },
         onToggleStatus: () => ctrl.toggleStatus(x.id),
         onCancel: () => ctrl.cancelTermin(x.id),
         onDelete: () => ctrl.deleteTermin(x.id),
@@ -1438,11 +1463,11 @@ class BevorstehendeKundenBox extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status) {
       case Termin.statusBestaetigt:
-        return const Color(0xFF2E7D32);
+        return const Color(0xFFFFB74D);
       case Termin.statusAbgesagt:
         return const Color(0xFFC62828);
       default:
-        return const Color(0xFF1565C0);
+        return const Color(0xFFF57C00);
     }
   }
 }
@@ -1473,7 +1498,6 @@ class _StatusChip extends StatelessWidget {
     );
   }
 }
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\dashboard\box_freie_zeitfenster.dart =====
@@ -1668,7 +1692,7 @@ class _BoxSharedState extends State<BoxShared> {
 // -------------------
 
 class DashboardUi {
-  static const headerOrange = Color(0xFFCC5C4C);
+  static const headerOrange = Color(0xFFF57C00);
 
   static const outerRadius = 22.0;
   static const innerRadius = 18.0;
@@ -1705,7 +1729,7 @@ class DashboardPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(10),
+        color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -1763,11 +1787,11 @@ class _DashboardBoxState extends State<DashboardBox> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
 
-    final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
-    final inner = isDark ? const Color(0xFF141D27) : Colors.white;
+    final panel = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFB74D);
+    final inner = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
-    final border = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(18);
-    final tileBorder = isDark ? Colors.white.withAlpha(14) : const Color(0xFFE9E9E9);
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
+    final tileBorder = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE9E9E9);
 
     return SizedBox(
       height: widget.height,
@@ -1901,7 +1925,7 @@ class _EntryTile extends StatelessWidget {
     final clickable = e.onTap != null;
     final subtitle = (e.subtitle ?? '').trim();
 
-    final tileBg = isDark ? const Color(0xFF141D27) : Colors.white;
+    final tileBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     return Material(
       color: tileBg,
@@ -1910,7 +1934,7 @@ class _EntryTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         onTap: e.onTap,
         mouseCursor: clickable ? SystemMouseCursors.click : SystemMouseCursors.basic,
-        splashColor: Colors.black.withAlpha(10),
+        splashColor: const Color(0xFFE0E0E0),
         hoverColor: Colors.black.withAlpha(6),
         child: Container(
           height: DashboardUi.rowHeight,
@@ -1980,7 +2004,7 @@ class _EmptyLine extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scheme = Theme.of(context).colorScheme;
 
-    final tileBg = isDark ? const Color(0xFF141D27) : Colors.white;
+    final tileBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     return Align(
       alignment: Alignment.topCenter,
@@ -2027,7 +2051,6 @@ class _NoGlowScrollBehavior extends ScrollBehavior {
     return child;
   }
 }
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\l10n\app_de.arb =====
@@ -5172,7 +5195,7 @@ class PrefsTerminquelle implements Terminquelle {
 
   static const _demoVersionKey = 'fo_termine_demo_version';
   static const _legacySeedKey = 'fo_termine_seeded_v1';
-  static const int _demoVersion = 6;
+  static const int _demoVersion = 7;
 
   static const List<String> _kundePool = <String>[
     'Refik Erdogan',
@@ -5451,13 +5474,15 @@ class PrefsTerminquelle implements Terminquelle {
     if (currentVersion >= _demoVersion) return;
 
     final now = DateTime.now();
-    final nowMonday = _mondayOf(now);
+    final yearStartMonday = _mondayOf(DateTime(now.year, 1, 1));
     final julyCutoff = DateTime(now.year, 7, 15);
     final cutoffMonday = _mondayOf(now.isAfter(julyCutoff) ? now : julyCutoff);
 
-    for (var cursor = nowMonday;
-        !cursor.isAfter(cutoffMonday);
-        cursor = cursor.add(const Duration(days: 7))) {
+    for (
+      var cursor = yearStartMonday;
+      !cursor.isAfter(cutoffMonday);
+      cursor = cursor.add(const Duration(days: 7))
+    ) {
       await _mergeDemoWeek(sp, cursor);
     }
 
@@ -5492,78 +5517,61 @@ class PrefsTerminquelle implements Terminquelle {
     return decoded
         .whereType<Map>()
         .map((e) => Termin.fromJson(Map<String, dynamic>.from(e)))
-        .where((t) => StaffConfig.isValid(t.mitarbeiterName))
         .toList()
       ..sort((a, b) => a.start.compareTo(b.start));
   }
 
-  List<String> _stammkundenFuerMitarbeiter(int employeeIndex) {
-    const blockSize = 24;
-    final start = employeeIndex * blockSize;
-    final end = start + blockSize;
-    return _kundePool.sublist(start, end);
+  List<int> _slotIndexesForDay(int dayIndex) {
+    switch (dayIndex) {
+      case 0:
+        return const [1, 3, 4];
+      case 1:
+        return const [0, 2, 4];
+      case 2:
+        return const [2, 3, 4];
+      case 3:
+        return const [2, 3, 5];
+      case 4:
+        return const [1, 2, 3, 4, 6];
+      case 5:
+        return const [2, 3, 5];
+      default:
+        return const [1, 3, 4];
+    }
   }
 
   List<_SlotSeed> _baseSlotsForEmployee(int employeeIndex) {
     switch (employeeIndex) {
       case 0:
-        return const <_SlotSeed>[
-          _SlotSeed(hour: 8, minute: 30, duration: 30, service: 'Haarschnitt', price: 25),
-          _SlotSeed(hour: 9, minute: 15, duration: 45, service: 'Fade Cut', price: 31),
-          _SlotSeed(hour: 10, minute: 15, duration: 30, service: 'Bart', price: 19),
-          _SlotSeed(hour: 11, minute: 15, duration: 45, service: 'Haarschnitt + Bart', price: 39),
-          _SlotSeed(hour: 13, minute: 15, duration: 30, service: 'Konturen', price: 17),
-          _SlotSeed(hour: 14, minute: 15, duration: 45, service: 'Waschen + Styling', price: 27),
-          _SlotSeed(hour: 15, minute: 30, duration: 30, service: 'Maschinenschnitt', price: 22),
-          _SlotSeed(hour: 16, minute: 15, duration: 45, service: 'Skin Fade', price: 33),
-          _SlotSeed(hour: 17, minute: 30, duration: 30, service: 'Kontur + Finish', price: 18),
-          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Express Cut', price: 21),
+        return const [
+          _SlotSeed(hour: 8, minute: 30, duration: 30, service: 'Maschinenhaarschnitt', price: 18),
+          _SlotSeed(hour: 14, minute: 0, duration: 60, service: 'Waschen + Schneiden', price: 32),
+          _SlotSeed(hour: 15, minute: 30, duration: 45, service: 'Fade Cut', price: 28),
+          _SlotSeed(hour: 16, minute: 0, duration: 60, service: 'Bart + Kontur', price: 26),
+          _SlotSeed(hour: 17, minute: 30, duration: 30, service: 'Kurzhaarschnitt', price: 20),
+          _SlotSeed(hour: 18, minute: 0, duration: 45, service: 'Styling Cut', price: 30),
+          _SlotSeed(hour: 13, minute: 30, duration: 30, service: 'Express Cut', price: 17),
         ];
       case 1:
-        return const <_SlotSeed>[
-          _SlotSeed(hour: 8, minute: 45, duration: 30, service: 'Maschinenschnitt', price: 22),
-          _SlotSeed(hour: 9, minute: 30, duration: 45, service: 'Mid Fade', price: 30),
-          _SlotSeed(hour: 10, minute: 30, duration: 30, service: 'Bart + Rasur', price: 22),
-          _SlotSeed(hour: 11, minute: 30, duration: 45, service: 'Haarschnitt Premium', price: 37),
-          _SlotSeed(hour: 13, minute: 30, duration: 30, service: 'Konturen', price: 17),
-          _SlotSeed(hour: 14, minute: 15, duration: 45, service: 'Styling', price: 24),
-          _SlotSeed(hour: 15, minute: 30, duration: 30, service: 'Haarschnitt', price: 24),
-          _SlotSeed(hour: 16, minute: 15, duration: 45, service: 'Skin Fade', price: 33),
-          _SlotSeed(hour: 17, minute: 15, duration: 30, service: 'Bart', price: 18),
-          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Kontur + Finish', price: 18),
+        return const [
+          _SlotSeed(hour: 8, minute: 45, duration: 30, service: 'Konturen', price: 15),
+          _SlotSeed(hour: 13, minute: 30, duration: 30, service: 'Bart trimmen', price: 16),
+          _SlotSeed(hour: 14, minute: 0, duration: 45, service: 'Classic Cut', price: 24),
+          _SlotSeed(hour: 15, minute: 30, duration: 45, service: 'Fade + Bart', price: 29),
+          _SlotSeed(hour: 16, minute: 0, duration: 60, service: 'Waschen + Styling', price: 31),
+          _SlotSeed(hour: 17, minute: 15, duration: 30, service: 'Fresh Up', price: 18),
+          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Express Cut', price: 17),
         ];
       default:
-        return const <_SlotSeed>[
-          _SlotSeed(hour: 8, minute: 30, duration: 30, service: 'Haarschnitt', price: 24),
-          _SlotSeed(hour: 9, minute: 30, duration: 45, service: 'Low Fade', price: 30),
-          _SlotSeed(hour: 10, minute: 45, duration: 30, service: 'Bart', price: 18),
-          _SlotSeed(hour: 11, minute: 45, duration: 45, service: 'Haarschnitt + Waschen', price: 34),
-          _SlotSeed(hour: 13, minute: 45, duration: 30, service: 'Augenbrauen + Kontur', price: 16),
-          _SlotSeed(hour: 14, minute: 30, duration: 45, service: 'Styling + Finish', price: 26),
-          _SlotSeed(hour: 15, minute: 45, duration: 30, service: 'Maschinenschnitt', price: 21),
-          _SlotSeed(hour: 16, minute: 30, duration: 45, service: 'Fade Cut', price: 31),
-          _SlotSeed(hour: 17, minute: 30, duration: 30, service: 'Express Cut', price: 20),
-          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Konturen', price: 17),
+        return const [
+          _SlotSeed(hour: 8, minute: 30, duration: 30, service: 'Maschinenschnitt', price: 18),
+          _SlotSeed(hour: 13, minute: 30, duration: 45, service: 'Cut + Finish', price: 25),
+          _SlotSeed(hour: 14, minute: 0, duration: 45, service: 'Classic Barber', price: 24),
+          _SlotSeed(hour: 15, minute: 30, duration: 45, service: 'Haarschnitt', price: 23),
+          _SlotSeed(hour: 16, minute: 0, duration: 60, service: 'Komplettservice', price: 34),
+          _SlotSeed(hour: 17, minute: 15, duration: 30, service: 'Bartpflege', price: 16),
+          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Kurzhaarschnitt', price: 19),
         ];
-    }
-  }
-
-  List<int> _slotIndexesForDay(int dayIndex) {
-    switch (dayIndex) {
-      case 0: // Montag
-        return const [0, 1, 2, 3, 5, 6, 7];
-      case 1: // Dienstag
-        return const [0, 1, 2, 3, 5, 7];
-      case 2: // Mittwoch
-        return const [0, 1, 3, 5, 6, 7];
-      case 3: // Donnerstag
-        return const [0, 1, 2, 3, 5, 6, 7, 8];
-      case 4: // Freitag
-        return const [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-      case 5: // Samstag
-        return const [0, 1, 2, 3, 5, 6, 7, 8];
-      default:
-        return const [0, 1, 2, 3, 5, 6];
     }
   }
 
@@ -5573,17 +5581,9 @@ class PrefsTerminquelle implements Terminquelle {
     required int employeeIndex,
     required int slotIndex,
   }) {
-    final stammkunden = _stammkundenFuerMitarbeiter(employeeIndex);
-    final recurringSeed = weekIndex * 11 + dayIndex * 5 + slotIndex;
-
-    final useStammkunde = recurringSeed % 10 < 7;
-    if (useStammkunde) {
-      final idx = (weekIndex * 3 + dayIndex * 2 + slotIndex) % stammkunden.length;
-      return stammkunden[idx];
-    }
-
     final poolIndex =
-        (weekIndex * 37 + dayIndex * 13 + employeeIndex * 7 + slotIndex * 5) % _kundePool.length;
+        (weekIndex * 37 + dayIndex * 11 + employeeIndex * 17 + slotIndex * 5) %
+            _kundePool.length;
     return _kundePool[poolIndex];
   }
 
@@ -5796,7 +5796,7 @@ class _AuthGateState extends State<AuthGate> {
     final t = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0E14),
+      backgroundColor: const Color(0xFF121212),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -5804,9 +5804,9 @@ class _AuthGateState extends State<AuthGate> {
             padding: const EdgeInsets.all(18),
             margin: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: const Color(0xFF121826),
+              color: const Color(0xFF1E1E1E),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: const Color(0xFF2C2C2C)),
               boxShadow: const [
                 BoxShadow(
                   color: Color.fromARGB(60, 0, 0, 0),
@@ -5835,7 +5835,7 @@ class _AuthGateState extends State<AuthGate> {
                     labelText: t.username,
                     labelStyle: const TextStyle(color: Colors.white70),
                     filled: true,
-                    fillColor: const Color(0xFF0F131B),
+                    fillColor: const Color(0xFF1E1E1E),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -5852,7 +5852,7 @@ class _AuthGateState extends State<AuthGate> {
                     labelText: t.password,
                     labelStyle: const TextStyle(color: Colors.white70),
                     filled: true,
-                    fillColor: const Color(0xFF0F131B),
+                    fillColor: const Color(0xFF1E1E1E),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -5866,7 +5866,7 @@ class _AuthGateState extends State<AuthGate> {
                   child: ElevatedButton(
                     onPressed: _loading ? null : _login,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFC95B4C),
+                      backgroundColor: const Color(0xFFF57C00),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -5894,6 +5894,7 @@ class _AuthGateState extends State<AuthGate> {
 }
 
 
+
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\seiten\dashboard.dart =====
 
 import 'package:flutter/material.dart';
@@ -5919,9 +5920,9 @@ class DashboardPage extends StatelessWidget {
 
   const DashboardPage({super.key, required this.benutzername});
 
-  static const _orange = Color(0xFFCC5C4C);
-  static const _blue = Color(0xFF335776);
-  static const _violet = Color(0xFF6E61A8);
+  static const _orange = Color(0xFFF57C00);
+  static const _blue = Color(0xFFFFB74D);
+  static const _violet = Color(0xFFFFB74D);
 
   @override
   Widget build(BuildContext context) {
@@ -5931,9 +5932,9 @@ class DashboardPage extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     final bg = Theme.of(context).scaffoldBackgroundColor;
-    final surface = isDark ? const Color(0xFF111821) : Colors.white;
-    final surface2 = isDark ? const Color(0xFF141D27) : Colors.white;
-    final border = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(18);
+    final surface = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final surface2 = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     final ctrl = context.watch<TerminplanController>();
     final messenger = ScaffoldMessenger.of(context);
@@ -6121,7 +6122,7 @@ class DashboardPage extends StatelessWidget {
                               icon: Icons.sync,
                               label: t.kpiChanges,
                               value: ctrl.aenderungen.length.toString(),
-                              accent: const Color(0xFF2E7DDB),
+                              accent: const Color(0xFFFFB74D),
                             ),
                           ),
                         ],
@@ -6191,7 +6192,7 @@ class _WelcomeHeader extends StatelessWidget {
             TextSpan(text: t.welcome, style: baseStyle),
             TextSpan(
               text: ', $benutzername!',
-              style: baseStyle?.copyWith(color: const Color(0xFFCC5C4C)),
+              style: baseStyle?.copyWith(color: const Color(0xFFF57C00)),
             ),
           ],
         ),
@@ -6621,8 +6622,8 @@ class _KundenSeiteState extends State<KundenSeite> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = Theme.of(context).scaffoldBackgroundColor;
-    final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
-    final surface = isDark ? const Color(0xFF141D27) : Colors.white;
+    final panel = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFB74D);
+    final surface = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -6715,6 +6716,7 @@ class _KundenSeiteState extends State<KundenSeite> {
     );
   }
 }
+
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\seiten\mitarbeiter.dart =====
@@ -6822,8 +6824,8 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
 
     const panelBlue = AppColors.bluePanel;
 
-    final innerCard = isDark ? const Color(0xFF111821) : Colors.white;
-    final notesFill = isDark ? const Color(0xFF141D27) : const Color(0xFFF6F6F6);
+    final innerCard = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final notesFill = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
     final text = isDark ? Colors.white : Colors.black;
     final sub = isDark ? Colors.white70 : Colors.black54;
 
@@ -6886,7 +6888,7 @@ class _MitarbeiterSeiteState extends State<MitarbeiterSeite> {
                           icon: const Icon(Icons.save_outlined),
                           label: Text(t.save),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFB5A7),
+                            backgroundColor: const Color(0xFFFFB74D),
                             foregroundColor: Colors.black,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -7052,7 +7054,7 @@ class _UserHeaderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final cardBg = isDark ? const Color(0xFF111821) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
     final title = isDark ? Colors.white : Colors.black;
     final sub = isDark ? Colors.white70 : Colors.black54;
 
@@ -7065,7 +7067,7 @@ class _UserHeaderCard extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 28,
-              backgroundColor: const Color(0xFFFFE0D7),
+              backgroundColor: const Color(0xFFFFB74D),
               child: Icon(Icons.person, color: Colors.black.withAlpha(160)),
             ),
             const SizedBox(width: 14),
@@ -7121,7 +7123,7 @@ class _InnerPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final border = isDark ? Colors.white.withAlpha(16) : Colors.black.withAlpha(10);
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadii.r18),
@@ -7136,7 +7138,7 @@ class _InnerPanel extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(titleIcon, color: const Color(0xFFC95B4C)),
+                  Icon(titleIcon, color: const Color(0xFFF57C00)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -7173,8 +7175,8 @@ class _SlotTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? const Color(0xFF141D27) : const Color(0xFFF5F6F8);
-    final border = isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(10);
+    final bg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
     final text = isDark ? Colors.white : Colors.black;
 
     return Container(
@@ -7190,7 +7192,7 @@ class _SlotTile extends StatelessWidget {
             width: 6,
             height: 24,
             decoration: BoxDecoration(
-              color: const Color(0xFF335776),
+              color: const Color(0xFFFFB74D),
               borderRadius: BorderRadius.circular(99),
             ),
           ),
@@ -7302,7 +7304,7 @@ class _Rail extends StatelessWidget {
     final t = AppLocalizations.of(context)!;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? const Color(0xFF0E1420) : const Color(0xFFF3F4F6);
+    final bg = isDark ? const Color(0xFF121212) : const Color(0xFFFFFFFF);
 
     return Container(
       width: 240,
@@ -7313,11 +7315,15 @@ class _Rail extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
-              child: Text(
-                t.appTitle,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Image.asset(
+                  isDark
+                      ? 'assets/LogoOrangeLight.png'
+                      : 'assets/LogoOrangeDark.png',
+                  height: 200,
+                  fit: BoxFit.contain,
+                  alignment: Alignment.centerLeft,
                 ),
               ),
             ),
@@ -7391,7 +7397,8 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final border =
+        isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
@@ -7402,12 +7409,12 @@ class _NavItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
             color: selected
-                ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40)
+                ? const Color(0xFFF57C00).withAlpha(isDark ? 32 : 18)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: selected
-                  ? const Color(0xFFC95B4C).withAlpha(110)
+                  ? const Color(0xFFF57C00).withAlpha(110)
                   : border,
             ),
           ),
@@ -7519,9 +7526,9 @@ class _StatistikSeiteState extends State<StatistikSeite> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final pageBg = isDark ? const Color(0xFF0B0E14) : const Color(0xFFF4F4F4);
-    final cardBg = isDark ? const Color(0xFF121826) : Colors.white;
-    final border = isDark ? Colors.white10 : Colors.black12;
+    final pageBg = isDark ? const Color(0xFF121212) : const Color(0xFFF4F4F4);
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final border = isDark ? Colors.white10 : const Color(0xFFE0E0E0);
     final textMain = isDark ? Colors.white : Colors.black;
     final textSub = isDark ? Colors.white70 : Colors.black54;
 
@@ -7673,7 +7680,7 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     return Row(
       children: [
@@ -7691,7 +7698,7 @@ class _TopBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.black12,
+              color: isDark ? Colors.white10 : const Color(0xFFE0E0E0),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: border),
             ),
@@ -7717,7 +7724,7 @@ class _TopBar extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white10 : Colors.black12,
+            color: isDark ? Colors.white10 : const Color(0xFFE0E0E0),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: border),
           ),
@@ -7790,7 +7797,7 @@ class _LeftPanel extends StatelessWidget {
       return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
     });
 
-    final barColor = const Color(0xFFCC5C4C).withOpacity(isDark ? 0.92 : 0.95);
+    final barColor = const Color(0xFFF57C00).withOpacity(isDark ? 0.92 : 0.95);
     final dayLabels = [
       t.monShort,
       t.tueShort,
@@ -7868,7 +7875,7 @@ class _LeftPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Divider(color: isDark ? Colors.white10 : Colors.black12),
+          Divider(color: isDark ? Colors.white10 : const Color(0xFFE0E0E0)),
           const SizedBox(height: 14),
           Text(
             t.idleHeatmapTitle,
@@ -7890,12 +7897,12 @@ class _LeftPanel extends StatelessWidget {
             children: [
               _LegendDot(
                 label: t.legendIdle,
-                color: const Color(0xFFCC5C4C).withOpacity(0.8),
+                color: const Color(0xFFF57C00).withOpacity(0.8),
                 textColor: textSub,
               ),
               _LegendDot(
                 label: t.legendBooked,
-                color: const Color(0xFF2E7DDB).withOpacity(0.8),
+                color: const Color(0xFFFFB74D).withOpacity(0.8),
                 textColor: textSub,
               ),
             ],
@@ -7906,7 +7913,7 @@ class _LeftPanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: isDark ? Colors.white10 : Colors.black.withAlpha(8),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+              border: Border.all(color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0)),
             ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -7962,8 +7969,8 @@ class _LeftPanel extends StatelessWidget {
                             final busy = _busyAt(slotStart, slotEnd);
 
                             final color = busy
-                                ? const Color(0xFF2E7DDB).withOpacity(0.75)
-                                : const Color(0xFFCC5C4C).withOpacity(0.75);
+                                ? const Color(0xFFFFB74D).withOpacity(0.75)
+                                : const Color(0xFFF57C00).withOpacity(0.75);
 
                             return Container(
                               width: 60,
@@ -8104,7 +8111,7 @@ class _RightPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Divider(color: isDark ? Colors.white10 : Colors.black12),
+          Divider(color: isDark ? Colors.white10 : const Color(0xFFE0E0E0)),
           const SizedBox(height: 10),
           Text(
             t.freeSlotsTop,
@@ -8123,7 +8130,7 @@ class _RightPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white10 : Colors.black.withAlpha(8),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                  border: Border.all(color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0)),
                 ),
                 child: Row(
                   children: [
@@ -8144,7 +8151,7 @@ class _RightPanel extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFCC5C4C).withOpacity(0.75),
+                        color: const Color(0xFFF57C00).withOpacity(0.75),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -8183,7 +8190,7 @@ class _MetricTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? Colors.white10 : Colors.black.withAlpha(8);
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     final textMain = isDark ? Colors.white : Colors.black;
     final textSub = isDark ? Colors.white70 : Colors.black54;
@@ -8201,7 +8208,7 @@ class _MetricTile extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.black.withAlpha(10),
+              color: isDark ? Colors.white10 : const Color(0xFFE0E0E0),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: border),
             ),
@@ -8275,11 +8282,13 @@ class TermineWochenansicht extends StatelessWidget {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = Theme.of(context).scaffoldBackgroundColor;
-    final panel = isDark ? const Color(0xFF111821) : const Color(0xFF355573);
-    final inner = isDark ? const Color(0xFF141D27) : Colors.white;
+    final panel = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFB74D);
+    final inner = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     final filtered = ctrl.termine
-        .where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName))
+        .where((t) =>
+            _sameName(t.mitarbeiterName, sichtMitarbeiterName) &&
+            t.status != Termin.statusAbgesagt)
         .toList();
 
     return Scaffold(
@@ -8491,7 +8500,13 @@ class TerminplanService {
   }
 
   DateTime _snapToHalfHour(DateTime value) {
-    final clean = DateTime(value.year, value.month, value.day, value.hour, value.minute);
+    final clean = DateTime(
+      value.year,
+      value.month,
+      value.day,
+      value.hour,
+      value.minute,
+    );
     final remainder = clean.minute % 30;
 
     if (remainder == 0) {
@@ -8499,6 +8514,53 @@ class TerminplanService {
     }
 
     return clean.add(Duration(minutes: 30 - remainder));
+  }
+
+  bool _overlaps(
+    DateTime aStart,
+    DateTime aEnd,
+    DateTime bStart,
+    DateTime bEnd,
+  ) {
+    return aStart.isBefore(bEnd) && aEnd.isAfter(bStart);
+  }
+
+  bool _hasConflict({
+    required List<Termin> termine,
+    required DateTime start,
+    required DateTime end,
+    required String mitarbeiterName,
+    String? ignoreId,
+  }) {
+    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(mitarbeiterName);
+
+    return termine.any((t) {
+      if (ignoreId != null && t.id == ignoreId) return false;
+      if (t.status == Termin.statusAbgesagt) return false;
+
+      final terminMitarbeiter = StaffConfig.normalizeEmployee(t.mitarbeiterName);
+      if (terminMitarbeiter != normalizedMitarbeiter) return false;
+
+      return _overlaps(start, end, t.start, t.end);
+    });
+  }
+
+  void _throwIfConflict({
+    required List<Termin> termine,
+    required DateTime start,
+    required DateTime end,
+    required String mitarbeiterName,
+    String? ignoreId,
+  }) {
+    if (_hasConflict(
+      termine: termine,
+      start: start,
+      end: end,
+      mitarbeiterName: mitarbeiterName,
+      ignoreId: ignoreId,
+    )) {
+      throw 'Dieser Slot ist bereits belegt.';
+    }
   }
 
   Future<Termin> createTerminAt(
@@ -8517,12 +8579,20 @@ class TerminplanService {
     final list = await ladeWoche(monday);
 
     final normalizedMitarbeiter = StaffConfig.normalizeEmployee(mitarbeiterName);
+    final newEnd = normalizedStart.add(Duration(minutes: minutes));
+
+    _throwIfConflict(
+      termine: list,
+      start: normalizedStart,
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+    );
 
     final id = 'new_${DateTime.now().millisecondsSinceEpoch}';
     final t = Termin(
       id: id,
       start: normalizedStart,
-      end: normalizedStart.add(Duration(minutes: minutes)),
+      end: newEnd,
       kundeName: kundeName,
       mitarbeiterName: normalizedMitarbeiter,
       status: status,
@@ -8554,12 +8624,22 @@ class TerminplanService {
 
     final old = list[idx];
     final dur = old.end.difference(old.start);
+    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(old.mitarbeiterName);
+    final newEnd = newStart.add(dur);
+
+    _throwIfConflict(
+      termine: list,
+      start: newStart,
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+      ignoreId: id,
+    );
 
     list[idx] = old.copyWith(
       start: newStart,
-      end: newStart.add(dur),
-      mitarbeiterName: StaffConfig.normalizeEmployee(old.mitarbeiterName),
-      color: old.color ?? StaffConfig.colorOf(old.mitarbeiterName),
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+      color: old.color ?? StaffConfig.colorOf(normalizedMitarbeiter),
     );
 
     list.sort((a, b) => a.start.compareTo(b.start));
@@ -8573,14 +8653,42 @@ class TerminplanService {
     if (idx == -1) return;
 
     final old = list[idx];
+    final normalizedMitarbeiter = StaffConfig.normalizeEmployee(old.mitarbeiterName);
+    final newEnd = old.start.add(Duration(minutes: minutes));
+
+    _throwIfConflict(
+      termine: list,
+      start: old.start,
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+      ignoreId: id,
+    );
+
     list[idx] = old.copyWith(
-      end: old.start.add(Duration(minutes: minutes)),
-      mitarbeiterName: StaffConfig.normalizeEmployee(old.mitarbeiterName),
-      color: old.color ?? StaffConfig.colorOf(old.mitarbeiterName),
+      end: newEnd,
+      mitarbeiterName: normalizedMitarbeiter,
+      color: old.color ?? StaffConfig.colorOf(normalizedMitarbeiter),
     );
 
     list.sort((a, b) => a.start.compareTo(b.start));
     await speichereWoche(monday, list);
+  }
+
+  Future<void> updateStatus(String id, String status, DateTime anyDate) async {
+    final monday = mondayOf(anyDate);
+    final list = await ladeWoche(monday);
+    final idx = list.indexWhere((t) => t.id == id);
+    if (idx == -1) return;
+
+    final old = list[idx];
+    list[idx] = old.copyWith(status: status);
+
+    list.sort((a, b) => a.start.compareTo(b.start));
+    await speichereWoche(monday, list);
+  }
+
+  Future<void> cancelTermin(String id, DateTime anyDate) async {
+    await updateStatus(id, Termin.statusAbgesagt, anyDate);
   }
 }
 
@@ -8622,8 +8730,8 @@ class AccountPanel extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final cardBg = isDark ? const Color(0xFF111821) : Colors.white;
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
     final text = isDark ? Colors.white : Colors.black;
 
     return Container(
@@ -8653,7 +8761,7 @@ class AccountPanel extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   color: sel ? Colors.white : text,
                 ),
-                selectedColor: const Color(0xFFC95B4C),
+                selectedColor: const Color(0xFFF57C00),
                 onSelected: (_) => onChanged(a),
               );
             }).toList(),
@@ -8672,7 +8780,6 @@ class AccountPanel extends StatelessWidget {
     );
   }
 }
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\widgets\app_card.dart =====
@@ -9065,7 +9172,7 @@ class DashboardPanels extends StatelessWidget {
                     final label =
                         '${DateFormat('HH:mm').format(f.start)} – ${DateFormat('HH:mm').format(f.end)}';
                     return _RowCard(
-                      leadingColor: const Color(0xFF355573),
+                      leadingColor: const Color(0xFFFFB74D),
                       title: label,
                       subtitle: '',
                       rightChip: const _SmallPill(text: 'frei'),
@@ -9081,9 +9188,9 @@ class DashboardPanels extends StatelessWidget {
   }
 
   Color _colorForStatus(String status) {
-    if (status == Termin.statusBestaetigt) return const Color(0xFF2E7D32);
+    if (status == Termin.statusBestaetigt) return const Color(0xFFFFB74D);
     if (status == Termin.statusAbgesagt) return const Color(0xFFC62828);
-    return const Color(0xFF355573);
+    return const Color(0xFFFFB74D);
   }
 }
 
@@ -9098,7 +9205,7 @@ class _Panel extends StatelessWidget {
     required this.child,
   });
 
-  static const Color _panelBlue = Color(0xFF355573);
+  static const Color _panelBlue = Color(0xFFFFB74D);
   static const Color _headerOrange = Color(0xFFC95D4B);
 
   @override
@@ -9314,7 +9421,7 @@ class _StatusChip extends StatelessWidget {
       fg = const Color(0xFF1B5E20);
     } else if (status == Termin.statusAbgesagt) {
       bg = const Color(0xFFFCE8E6);
-      fg = const Color(0xFFB71C1C);
+      fg = const Color(0xFFF57C00);
     } else {
       bg = const Color(0xFFEAF1FF);
       fg = const Color(0xFF1E3A8A);
@@ -9362,7 +9469,6 @@ class _SmallPill extends StatelessWidget {
     );
   }
 }
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\widgets\kalender\appointment_block.dart =====
@@ -9556,11 +9662,23 @@ class TerminCreateResult {
 }
 
 DateTime _snapToHalfHour(DateTime value) {
-  final clean = DateTime(value.year, value.month, value.day, value.hour, value.minute);
+  final clean = DateTime(
+    value.year,
+    value.month,
+    value.day,
+    value.hour,
+    value.minute,
+  );
   final remainder = clean.minute % 30;
 
   if (remainder == 0) {
-    return DateTime(clean.year, clean.month, clean.day, clean.hour, clean.minute);
+    return DateTime(
+      clean.year,
+      clean.month,
+      clean.day,
+      clean.hour,
+      clean.minute,
+    );
   }
 
   final addMinutes = 30 - remainder;
@@ -9882,7 +10000,9 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                           )
                           .toList(),
                       onChanged: (v) => setState(
-                        () => mitarbeiter = StaffConfig.normalizeEmployee(v ?? mitarbeiter),
+                        () => mitarbeiter = StaffConfig.normalizeEmployee(
+                          v ?? mitarbeiter,
+                        ),
                       ),
                       decoration: InputDecoration(
                         labelText: t.employee,
@@ -9948,6 +10068,8 @@ Future<void> openCreateTerminFlow({
   String? initialMitarbeiter,
 }) async {
   final t = AppLocalizations.of(context)!;
+  final messenger = ScaffoldMessenger.of(context);
+  final kundenVerwaltung = context.read<KundenVerwaltung>();
 
   final res = await showCreateTerminDialog(
     context: context,
@@ -9956,17 +10078,29 @@ Future<void> openCreateTerminFlow({
   );
   if (res == null) return;
 
-  await ctrl.createTerminManual(
-    start: res.start,
-    minutes: res.durationMinutes,
-    kundeName: res.kundeName,
-    mitarbeiterName: StaffConfig.normalizeEmployee(res.mitarbeiterName),
-    status: res.status,
-  );
+  try {
+    await ctrl.createTerminManual(
+      start: res.start,
+      minutes: res.durationMinutes,
+      kundeName: res.kundeName,
+      mitarbeiterName: StaffConfig.normalizeEmployee(res.mitarbeiterName),
+      status: res.status,
+    );
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(t.successAppointmentSaved)),
-  );
+    await kundenVerwaltung.erstelleKundeFallsFehlt(
+      name: res.kundeName,
+      bevorzugterFriseur: StaffConfig.normalizeEmployee(res.mitarbeiterName),
+      naechsterTermin: res.start,
+    );
+
+    messenger.showSnackBar(
+      SnackBar(content: Text(t.successAppointmentSaved)),
+    );
+  } catch (e) {
+    messenger.showSnackBar(
+      SnackBar(content: Text(e.toString())),
+    );
+  }
 }
 
 
@@ -10485,7 +10619,7 @@ class WeeklyHeader extends StatelessWidget {
   final VoidCallback onToday;
   final VoidCallback onNext;
 
-  static const _orange = Color(0xFFCC5C4C);
+  static const _orange = Color(0xFFF57C00);
 
   @override
   Widget build(BuildContext context) {
@@ -10496,7 +10630,7 @@ class WeeklyHeader extends StatelessWidget {
     final rangeText = '$rangeStart – $rangeEnd';
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? Colors.white12 : Colors.black.withAlpha(25);
+    final borderColor = isDark ? const Color(0xFF2C2C2C) : Colors.black.withAlpha(25);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -10561,7 +10695,6 @@ class _IconChip extends StatelessWidget {
     );
   }
 }
-
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\widgets\kunde_create_dialog.dart =====
@@ -10770,7 +10903,7 @@ class KundeDialog extends StatefulWidget {
 }
 
 class _KundeDialogState extends State<KundeDialog> {
-  static const _orange = Color(0xFFCC5C4C);
+  static const _orange = Color(0xFFF57C00);
 
   late final TextEditingController nameCtrl;
   late final TextEditingController telCtrl;
@@ -11085,8 +11218,8 @@ class _KundenTabelleState extends State<KundenTabelle> {
     final scheme = Theme.of(context).colorScheme;
 
     final headerBg = isDark ? const Color(0xFF0F131B) : const Color(0xFFF2F4F7);
-    final rowBg = isDark ? const Color(0xFF141D27) : Colors.white;
-    final rowAltBg = isDark ? const Color(0xFF111821) : const Color(0xFFF9FAFB);
+    final rowBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final rowAltBg = isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF9FAFB);
 
     final headerStyle = TextStyle(
       color: isDark ? Colors.white.withAlpha(235) : Colors.black.withAlpha(210),
@@ -11106,8 +11239,8 @@ class _KundenTabelleState extends State<KundenTabelle> {
       fontSize: 13,
     );
 
-    final divider = isDark ? Colors.white.withAlpha(14) : Colors.black.withAlpha(14);
-    final headerDivider = isDark ? Colors.white.withAlpha(18) : Colors.black.withAlpha(16);
+    final divider = isDark ? const Color(0xFF2C2C2C) : Colors.black.withAlpha(14);
+    final headerDivider = isDark ? const Color(0xFF2C2C2C) : Colors.black.withAlpha(16);
 
     final totalRows = math.max(widget.kunden.length, widget.minLinien);
 
@@ -11162,7 +11295,7 @@ class _KundenTabelleState extends State<KundenTabelle> {
                                 k.stammkunde ? Icons.check_box : Icons.check_box_outline_blank,
                                 size: 20,
                                 color: k.stammkunde
-                                    ? const Color(0xFF2E7D32)
+                                    ? const Color(0xFFFFB74D)
                                     : (isDark
                                         ? Colors.white.withAlpha(140)
                                         : Colors.black.withAlpha(120)),
@@ -11298,8 +11431,8 @@ class Sidebar extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final bg = isDark ? const Color(0xFF0E1420) : const Color(0xFFF3F4F6);
-    final border = isDark ? Colors.white12 : Colors.black12;
+    final bg = isDark ? const Color(0xFF121212) : const Color(0xFFFFFFFF);
+    final border = isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
     final items = [
       (_t(l, 'Dashboard', (x) => x.dashboard), Icons.dashboard_outlined),
@@ -11342,10 +11475,10 @@ class Sidebar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       decoration: BoxDecoration(
                         color: selected
-                            ? const Color(0xFFC95B4C).withAlpha(isDark ? 55 : 40)
+                            ? const Color(0xFFF57C00).withAlpha(isDark ? 55 : 40)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: selected ? const Color(0xFFC95B4C).withAlpha(90) : border),
+                        border: Border.all(color: selected ? const Color(0xFFF57C00).withAlpha(90) : border),
                       ),
                       child: Row(
                         children: [
@@ -11377,7 +11510,6 @@ class Sidebar extends StatelessWidget {
 }
 
 
-
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\widgets\theme\app_sizes.dart =====
 
 class AppSizes {
@@ -11405,12 +11537,22 @@ import 'app_tokens.dart';
 
 class AppTheme {
   static ThemeData light() {
+    const surface = Color(0xFFFFFFFF);
+    const onSurface = Colors.black87;
+    const outline = Color(0xFFE0E0E0);
+
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.orange,
       brightness: Brightness.light,
     ).copyWith(
       primary: AppColors.orange,
       secondary: AppColors.bluePanel,
+      surface: surface,
+      onSurface: onSurface,
+      onPrimary: Colors.white,
+      onSecondary: Colors.black,
+      outline: outline,
+      outlineVariant: outline,
     );
 
     return ThemeData(
@@ -11424,8 +11566,7 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         foregroundColor: scheme.onSurface,
       ),
-      dividerColor: scheme.outlineVariant.withOpacity(0.4),
-
+      dividerColor: const Color(0xFFE0E0E0),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFFFFFFFF),
@@ -11433,8 +11574,15 @@ class AppTheme {
           borderRadius: BorderRadius.circular(AppRadii.r14),
           borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.r14),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.r14),
+          borderSide: const BorderSide(color: AppColors.orange),
+        ),
       ),
-
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.all(AppColors.orange),
@@ -11453,10 +11601,9 @@ class AppTheme {
   }
 
   static ThemeData dark() {
-    // 🔥 Statistik-Look: dunkel, leicht bläulich, Orange-Akzent
     const bg = Color(0xFF121212);
     const surface = Color(0xFF1E1E1E);
-    const surface2 = Color(0xFF1E1E1E);
+    const outline = Color(0xFF2C2C2C);
 
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.orange,
@@ -11465,6 +11612,11 @@ class AppTheme {
       primary: AppColors.orange,
       secondary: AppColors.bluePanel,
       surface: surface,
+      onSurface: Colors.white70,
+      onPrimary: Colors.white,
+      onSecondary: Colors.black,
+      outline: outline,
+      outlineVariant: outline,
     );
 
     return ThemeData(
@@ -11477,37 +11629,41 @@ class AppTheme {
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-      dividerColor: scheme.outlineVariant.withOpacity(0.35),
-
-      // nicer default texts
+      dividerColor: const Color(0xFF2C2C2C),
       textTheme: ThemeData.dark().textTheme.apply(
             bodyColor: scheme.onSurface,
             displayColor: scheme.onSurface,
           ),
-
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface2,
+        fillColor: surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadii.r14),
           borderSide: BorderSide.none,
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.r14),
+          borderSide: const BorderSide(color: Color(0xFF2C2C2C)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppRadii.r14),
+          borderSide: const BorderSide(color: AppColors.orange),
+        ),
       ),
-
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
               return AppColors.orange.withOpacity(0.22);
             }
-            return surface2;
+            return surface;
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) return Colors.white;
-            return Colors.white.withOpacity(0.80);
+            return Colors.white70;
           }),
           side: WidgetStateProperty.all(
-            BorderSide(color: scheme.outlineVariant.withOpacity(0.35)),
+            const BorderSide(color: Color(0xFF2C2C2C)),
           ),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
@@ -11516,7 +11672,6 @@ class AppTheme {
           ),
         ),
       ),
-
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.all(AppColors.orange),
@@ -11534,6 +11689,7 @@ class AppTheme {
     );
   }
 }
+
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\lib\widgets\theme\app_tokens.dart =====
@@ -11563,8 +11719,8 @@ class AppColors {
 
   // Komfort-Getter (damit überall gleich)
   Color get surface => scheme.surface;
-  Color get surface2 => isDark ? scheme.surface.withOpacity(0.85) : scheme.surface;
-  Color get border => scheme.outlineVariant.withOpacity(isDark ? 0.35 : 0.55);
+  Color get surface2 => isDark ? const Color(0xFF1E1E1E) : const Color(0xFFFFFFFF);
+  Color get border => isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE0E0E0);
 
   Color get onSurface => scheme.onSurface;
 
@@ -11598,6 +11754,7 @@ class AppShadows {
     ),
   ];
 }
+
 
 
 ===== FILE: C:\friseur_orange_web\friseur_orange_web\linux\flutter\ephemeral\.plugin_symlinks\path_provider_linux\example\integration_test\path_provider_test.dart =====

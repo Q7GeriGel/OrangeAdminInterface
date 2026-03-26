@@ -33,7 +33,9 @@ class TermineWochenansicht extends StatelessWidget {
     final inner = isDark ? const Color(0xFF1E1E1E) : Colors.white;
 
     final filtered = ctrl.termine
-        .where((t) => _sameName(t.mitarbeiterName, sichtMitarbeiterName))
+        .where((t) =>
+            _sameName(t.mitarbeiterName, sichtMitarbeiterName) &&
+            t.status != Termin.statusAbgesagt)
         .toList();
 
     return Scaffold(

@@ -13,7 +13,7 @@ class PrefsTerminquelle implements Terminquelle {
 
   static const _demoVersionKey = 'fo_termine_demo_version';
   static const _legacySeedKey = 'fo_termine_seeded_v1';
-  static const int _demoVersion = 6;
+  static const int _demoVersion = 7;
 
   static const List<String> _kundePool = <String>[
     'Refik Erdogan',
@@ -292,13 +292,15 @@ class PrefsTerminquelle implements Terminquelle {
     if (currentVersion >= _demoVersion) return;
 
     final now = DateTime.now();
-    final nowMonday = _mondayOf(now);
+    final yearStartMonday = _mondayOf(DateTime(now.year, 1, 1));
     final julyCutoff = DateTime(now.year, 7, 15);
     final cutoffMonday = _mondayOf(now.isAfter(julyCutoff) ? now : julyCutoff);
 
-    for (var cursor = nowMonday;
-        !cursor.isAfter(cutoffMonday);
-        cursor = cursor.add(const Duration(days: 7))) {
+    for (
+      var cursor = yearStartMonday;
+      !cursor.isAfter(cutoffMonday);
+      cursor = cursor.add(const Duration(days: 7))
+    ) {
       await _mergeDemoWeek(sp, cursor);
     }
 
@@ -333,78 +335,61 @@ class PrefsTerminquelle implements Terminquelle {
     return decoded
         .whereType<Map>()
         .map((e) => Termin.fromJson(Map<String, dynamic>.from(e)))
-        .where((t) => StaffConfig.isValid(t.mitarbeiterName))
         .toList()
       ..sort((a, b) => a.start.compareTo(b.start));
   }
 
-  List<String> _stammkundenFuerMitarbeiter(int employeeIndex) {
-    const blockSize = 24;
-    final start = employeeIndex * blockSize;
-    final end = start + blockSize;
-    return _kundePool.sublist(start, end);
+  List<int> _slotIndexesForDay(int dayIndex) {
+    switch (dayIndex) {
+      case 0:
+        return const [1, 3, 4];
+      case 1:
+        return const [0, 2, 4];
+      case 2:
+        return const [2, 3, 4];
+      case 3:
+        return const [2, 3, 5];
+      case 4:
+        return const [1, 2, 3, 4, 6];
+      case 5:
+        return const [2, 3, 5];
+      default:
+        return const [1, 3, 4];
+    }
   }
 
   List<_SlotSeed> _baseSlotsForEmployee(int employeeIndex) {
     switch (employeeIndex) {
       case 0:
-        return const <_SlotSeed>[
-          _SlotSeed(hour: 8, minute: 30, duration: 30, service: 'Haarschnitt', price: 25),
-          _SlotSeed(hour: 9, minute: 15, duration: 45, service: 'Fade Cut', price: 31),
-          _SlotSeed(hour: 10, minute: 15, duration: 30, service: 'Bart', price: 19),
-          _SlotSeed(hour: 11, minute: 15, duration: 45, service: 'Haarschnitt + Bart', price: 39),
-          _SlotSeed(hour: 13, minute: 15, duration: 30, service: 'Konturen', price: 17),
-          _SlotSeed(hour: 14, minute: 15, duration: 45, service: 'Waschen + Styling', price: 27),
-          _SlotSeed(hour: 15, minute: 30, duration: 30, service: 'Maschinenschnitt', price: 22),
-          _SlotSeed(hour: 16, minute: 15, duration: 45, service: 'Skin Fade', price: 33),
-          _SlotSeed(hour: 17, minute: 30, duration: 30, service: 'Kontur + Finish', price: 18),
-          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Express Cut', price: 21),
+        return const [
+          _SlotSeed(hour: 8, minute: 30, duration: 30, service: 'Maschinenhaarschnitt', price: 18),
+          _SlotSeed(hour: 14, minute: 0, duration: 60, service: 'Waschen + Schneiden', price: 32),
+          _SlotSeed(hour: 15, minute: 30, duration: 45, service: 'Fade Cut', price: 28),
+          _SlotSeed(hour: 16, minute: 0, duration: 60, service: 'Bart + Kontur', price: 26),
+          _SlotSeed(hour: 17, minute: 30, duration: 30, service: 'Kurzhaarschnitt', price: 20),
+          _SlotSeed(hour: 18, minute: 0, duration: 45, service: 'Styling Cut', price: 30),
+          _SlotSeed(hour: 13, minute: 30, duration: 30, service: 'Express Cut', price: 17),
         ];
       case 1:
-        return const <_SlotSeed>[
-          _SlotSeed(hour: 8, minute: 45, duration: 30, service: 'Maschinenschnitt', price: 22),
-          _SlotSeed(hour: 9, minute: 30, duration: 45, service: 'Mid Fade', price: 30),
-          _SlotSeed(hour: 10, minute: 30, duration: 30, service: 'Bart + Rasur', price: 22),
-          _SlotSeed(hour: 11, minute: 30, duration: 45, service: 'Haarschnitt Premium', price: 37),
-          _SlotSeed(hour: 13, minute: 30, duration: 30, service: 'Konturen', price: 17),
-          _SlotSeed(hour: 14, minute: 15, duration: 45, service: 'Styling', price: 24),
-          _SlotSeed(hour: 15, minute: 30, duration: 30, service: 'Haarschnitt', price: 24),
-          _SlotSeed(hour: 16, minute: 15, duration: 45, service: 'Skin Fade', price: 33),
-          _SlotSeed(hour: 17, minute: 15, duration: 30, service: 'Bart', price: 18),
-          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Kontur + Finish', price: 18),
+        return const [
+          _SlotSeed(hour: 8, minute: 45, duration: 30, service: 'Konturen', price: 15),
+          _SlotSeed(hour: 13, minute: 30, duration: 30, service: 'Bart trimmen', price: 16),
+          _SlotSeed(hour: 14, minute: 0, duration: 45, service: 'Classic Cut', price: 24),
+          _SlotSeed(hour: 15, minute: 30, duration: 45, service: 'Fade + Bart', price: 29),
+          _SlotSeed(hour: 16, minute: 0, duration: 60, service: 'Waschen + Styling', price: 31),
+          _SlotSeed(hour: 17, minute: 15, duration: 30, service: 'Fresh Up', price: 18),
+          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Express Cut', price: 17),
         ];
       default:
-        return const <_SlotSeed>[
-          _SlotSeed(hour: 8, minute: 30, duration: 30, service: 'Haarschnitt', price: 24),
-          _SlotSeed(hour: 9, minute: 30, duration: 45, service: 'Low Fade', price: 30),
-          _SlotSeed(hour: 10, minute: 45, duration: 30, service: 'Bart', price: 18),
-          _SlotSeed(hour: 11, minute: 45, duration: 45, service: 'Haarschnitt + Waschen', price: 34),
-          _SlotSeed(hour: 13, minute: 45, duration: 30, service: 'Augenbrauen + Kontur', price: 16),
-          _SlotSeed(hour: 14, minute: 30, duration: 45, service: 'Styling + Finish', price: 26),
-          _SlotSeed(hour: 15, minute: 45, duration: 30, service: 'Maschinenschnitt', price: 21),
-          _SlotSeed(hour: 16, minute: 30, duration: 45, service: 'Fade Cut', price: 31),
-          _SlotSeed(hour: 17, minute: 30, duration: 30, service: 'Express Cut', price: 20),
-          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Konturen', price: 17),
+        return const [
+          _SlotSeed(hour: 8, minute: 30, duration: 30, service: 'Maschinenschnitt', price: 18),
+          _SlotSeed(hour: 13, minute: 30, duration: 45, service: 'Cut + Finish', price: 25),
+          _SlotSeed(hour: 14, minute: 0, duration: 45, service: 'Classic Barber', price: 24),
+          _SlotSeed(hour: 15, minute: 30, duration: 45, service: 'Haarschnitt', price: 23),
+          _SlotSeed(hour: 16, minute: 0, duration: 60, service: 'Komplettservice', price: 34),
+          _SlotSeed(hour: 17, minute: 15, duration: 30, service: 'Bartpflege', price: 16),
+          _SlotSeed(hour: 18, minute: 0, duration: 30, service: 'Kurzhaarschnitt', price: 19),
         ];
-    }
-  }
-
-  List<int> _slotIndexesForDay(int dayIndex) {
-    switch (dayIndex) {
-      case 0: // Montag
-        return const [0, 1, 2, 3, 5, 6, 7];
-      case 1: // Dienstag
-        return const [0, 1, 2, 3, 5, 7];
-      case 2: // Mittwoch
-        return const [0, 1, 3, 5, 6, 7];
-      case 3: // Donnerstag
-        return const [0, 1, 2, 3, 5, 6, 7, 8];
-      case 4: // Freitag
-        return const [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-      case 5: // Samstag
-        return const [0, 1, 2, 3, 5, 6, 7, 8];
-      default:
-        return const [0, 1, 2, 3, 5, 6];
     }
   }
 
@@ -414,17 +399,9 @@ class PrefsTerminquelle implements Terminquelle {
     required int employeeIndex,
     required int slotIndex,
   }) {
-    final stammkunden = _stammkundenFuerMitarbeiter(employeeIndex);
-    final recurringSeed = weekIndex * 11 + dayIndex * 5 + slotIndex;
-
-    final useStammkunde = recurringSeed % 10 < 7;
-    if (useStammkunde) {
-      final idx = (weekIndex * 3 + dayIndex * 2 + slotIndex) % stammkunden.length;
-      return stammkunden[idx];
-    }
-
     final poolIndex =
-        (weekIndex * 37 + dayIndex * 13 + employeeIndex * 7 + slotIndex * 5) % _kundePool.length;
+        (weekIndex * 37 + dayIndex * 11 + employeeIndex * 17 + slotIndex * 5) %
+            _kundePool.length;
     return _kundePool[poolIndex];
   }
 

@@ -25,11 +25,23 @@ class TerminCreateResult {
 }
 
 DateTime _snapToHalfHour(DateTime value) {
-  final clean = DateTime(value.year, value.month, value.day, value.hour, value.minute);
+  final clean = DateTime(
+    value.year,
+    value.month,
+    value.day,
+    value.hour,
+    value.minute,
+  );
   final remainder = clean.minute % 30;
 
   if (remainder == 0) {
-    return DateTime(clean.year, clean.month, clean.day, clean.hour, clean.minute);
+    return DateTime(
+      clean.year,
+      clean.month,
+      clean.day,
+      clean.hour,
+      clean.minute,
+    );
   }
 
   final addMinutes = 30 - remainder;
@@ -351,7 +363,9 @@ Future<TerminCreateResult?> showCreateTerminDialog({
                           )
                           .toList(),
                       onChanged: (v) => setState(
-                        () => mitarbeiter = StaffConfig.normalizeEmployee(v ?? mitarbeiter),
+                        () => mitarbeiter = StaffConfig.normalizeEmployee(
+                          v ?? mitarbeiter,
+                        ),
                       ),
                       decoration: InputDecoration(
                         labelText: t.employee,
@@ -417,6 +431,8 @@ Future<void> openCreateTerminFlow({
   String? initialMitarbeiter,
 }) async {
   final t = AppLocalizations.of(context)!;
+  final messenger = ScaffoldMessenger.of(context);
+  final kundenVerwaltung = context.read<KundenVerwaltung>();
 
   final res = await showCreateTerminDialog(
     context: context,
@@ -425,15 +441,27 @@ Future<void> openCreateTerminFlow({
   );
   if (res == null) return;
 
-  await ctrl.createTerminManual(
-    start: res.start,
-    minutes: res.durationMinutes,
-    kundeName: res.kundeName,
-    mitarbeiterName: StaffConfig.normalizeEmployee(res.mitarbeiterName),
-    status: res.status,
-  );
+  try {
+    await ctrl.createTerminManual(
+      start: res.start,
+      minutes: res.durationMinutes,
+      kundeName: res.kundeName,
+      mitarbeiterName: StaffConfig.normalizeEmployee(res.mitarbeiterName),
+      status: res.status,
+    );
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(t.successAppointmentSaved)),
-  );
+    await kundenVerwaltung.erstelleKundeFallsFehlt(
+      name: res.kundeName,
+      bevorzugterFriseur: StaffConfig.normalizeEmployee(res.mitarbeiterName),
+      naechsterTermin: res.start,
+    );
+
+    messenger.showSnackBar(
+      SnackBar(content: Text(t.successAppointmentSaved)),
+    );
+  } catch (e) {
+    messenger.showSnackBar(
+      SnackBar(content: Text(e.toString())),
+    );
+  }
 }

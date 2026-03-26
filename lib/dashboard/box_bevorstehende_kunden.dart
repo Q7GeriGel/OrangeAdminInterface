@@ -21,6 +21,7 @@ class BevorstehendeKundenBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     final ctrl = context.watch<TerminplanController>();
+    final messenger = ScaffoldMessenger.of(context);
     final list = ctrl.kommendeHeute(limit: 6);
 
     Future<void> openDetails(Termin x) async {
@@ -28,17 +29,33 @@ class BevorstehendeKundenBox extends StatelessWidget {
         context: context,
         termin: x,
         canEdit: true,
-        onMove: (newTime) {
-          final newStart = DateTime(
-            x.start.year,
-            x.start.month,
-            x.start.day,
-            newTime.hour,
-            newTime.minute,
-          );
-          ctrl.moveTermin(x.id, newStart);
+        onMove: (newTime) async {
+          try {
+            final newStart = DateTime(
+              x.start.year,
+              x.start.month,
+              x.start.day,
+              newTime.hour,
+              newTime.minute,
+            );
+            await ctrl.moveTermin(x.id, newStart);
+          } catch (e) {
+            if (!context.mounted) return;
+            messenger.showSnackBar(
+              SnackBar(content: Text(e.toString())),
+            );
+          }
         },
-        onChangeDuration: (minutes) => ctrl.updateDuration(x.id, minutes),
+        onChangeDuration: (minutes) async {
+          try {
+            await ctrl.updateDuration(x.id, minutes);
+          } catch (e) {
+            if (!context.mounted) return;
+            messenger.showSnackBar(
+              SnackBar(content: Text(e.toString())),
+            );
+          }
+        },
         onToggleStatus: () => ctrl.toggleStatus(x.id),
         onCancel: () => ctrl.cancelTermin(x.id),
         onDelete: () => ctrl.deleteTermin(x.id),
