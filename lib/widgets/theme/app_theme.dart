@@ -8,7 +8,7 @@ class AppTheme {
     const outline = Color(0xFFE0E0E0);
 
     final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.orange,
+      seedColor: const Color(0xFFF57C00),
       brightness: Brightness.light,
     ).copyWith(
       primary: AppColors.orange,
